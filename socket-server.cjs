@@ -3,9 +3,11 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 
 const app = express();
+app.get('/', (req, res) => res.send('GameBird socket server running'));
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  allowEIO3: true,
 });
 
 let gameState = null;
