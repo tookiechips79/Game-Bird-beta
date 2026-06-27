@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gamebird-v2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--host"],
+      "cwd": "/Users/randallpaguio/Desktop/GameBird V2",
+      "port": 5173,
+      "autoPort": true
+    }
+  ]
+}

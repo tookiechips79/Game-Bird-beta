@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Game Bird Betting App</title>
     <meta name="description" content="Real-time betting app for Game Bird matches" />
     <meta name="author" content="Game Bird" />
@@ -17,9 +17,10 @@
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#00FFFF" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Game Bird" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="screen-orientation" content="landscape" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -48,6 +49,13 @@
 
   <body>
     <div id="root" style="width: 100%; height: 100%; background: black;"></div>
+
+    <!-- Portrait mode warning -->
+    <div id="portrait-warning">
+      <div class="rotate-icon">⟳</div>
+      <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;">Rotate Your Device</div>
+      <div style="font-size: 1rem; color: #888; margin-top: 4px;">GameBird is optimized for landscape</div>
+    </div>
     
     <!-- Fallback if React fails to render -->
     <script>
@@ -70,13 +78,18 @@
     
     <!-- PWA Service Worker Registration -->
     <script>
-      // Lock screen orientation to landscape (try both modes for compatibility)
-      if (screen.orientation && screen.orientation.lock) {
-        // Try landscape-primary first, fall back to landscape
-        screen.orientation.lock('landscape').catch((error) => {
-          console.log('Could not lock to landscape: ', error);
-        });
+      // Lock to landscape + go fullscreen to hide browser chrome
+      function enterFullscreenLandscape() {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (req) req.call(el).catch(() => {});
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
       }
+      // Trigger on first user interaction (browsers require a gesture for fullscreen)
+      document.addEventListener('click', enterFullscreenLandscape, { once: true });
+      document.addEventListener('touchstart', enterFullscreenLandscape, { once: true });
       
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

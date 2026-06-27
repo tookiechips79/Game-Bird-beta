@@ -1,346 +1,289 @@
-import React, { useState, useEffect } from "react";
-import { useGameState } from "@/contexts/GameStateContext";
-import { useUser } from "@/contexts/UserContext";
-import { BookOpen, Users, Coins, Link, Unlink, ChevronDown, ChevronUp, Trophy } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useGame } from '@/contexts/GameContext';
+import { useNavigate } from 'react-router-dom';
+import { GameRecord } from '@/types';
+import Header from '@/components/layout/Header';
 
-const STORAGE_KEY = 'gameState_one_pocket_arena';
+function fmt(s: number) {
+  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  return `${m}:${(s % 60).toString().padStart(2, '0')}`;
+}
 
-const readFromStorage = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return null;
-};
-
-const readHistoryFromStorage = (): any[] => {
-  try {
-    const raw = localStorage.getItem('gamebird_bet_history');
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [];
-};
-
-const Whitebook: React.FC = () => {
-  const { gameState } = useGameState();
-  const { betHistory } = useUser();
-  const [showNextGame, setShowNextGame] = useState(false);
-  const [expandedGame, setExpandedGame] = useState<string | null>(null);
-  const [localData, setLocalData] = useState<any>(readFromStorage);
-  const [localHistory, setLocalHistory] = useState<any[]>(readHistoryFromStorage);
-
-  // Keep data fresh from localStorage every second (same-tab + cross-tab)
-  useEffect(() => {
-    const sync = () => {
-      setLocalData(readFromStorage());
-      setLocalHistory(readHistoryFromStorage());
-    };
-    window.addEventListener('storage', sync);
-    const interval = setInterval(sync, 1000);
-    return () => { window.removeEventListener('storage', sync); clearInterval(interval); };
-  }, []);
-
-  // Merge: prefer live context data, fall back to localStorage
-  const merged = {
-    teamAQueue:          gameState.teamAQueue?.length       ? gameState.teamAQueue       : (localData?.teamAQueue       || []),
-    teamBQueue:          gameState.teamBQueue?.length       ? gameState.teamBQueue       : (localData?.teamBQueue       || []),
-    bookedBets:          gameState.bookedBets?.length       ? gameState.bookedBets       : (localData?.bookedBets       || []),
-    nextTeamAQueue:      gameState.nextTeamAQueue?.length   ? gameState.nextTeamAQueue   : (localData?.nextTeamAQueue   || []),
-    nextTeamBQueue:      gameState.nextTeamBQueue?.length   ? gameState.nextTeamBQueue   : (localData?.nextTeamBQueue   || []),
-    nextBookedBets:      gameState.nextBookedBets?.length   ? gameState.nextBookedBets   : (localData?.nextBookedBets   || []),
-    teamAName:           gameState.teamAName       || localData?.teamAName       || "Player A",
-    teamBName:           gameState.teamBName       || localData?.teamBName       || "Player B",
-    currentGameNumber:   gameState.currentGameNumber        ?? localData?.currentGameNumber ?? 1,
-    totalBookedAmount:   gameState.totalBookedAmount        ?? localData?.totalBookedAmount ?? 0,
-    nextTotalBookedAmount: gameState.nextTotalBookedAmount  ?? localData?.nextTotalBookedAmount ?? 0,
-  };
-
-  const {
-    teamAQueue, teamBQueue, bookedBets,
-    nextTeamAQueue, nextTeamBQueue, nextBookedBets,
-    teamAName, teamBName, currentGameNumber,
-    totalBookedAmount, nextTotalBookedAmount,
-  } = merged;
-
-  const totalAAmount = teamAQueue.reduce((s: number, b: any) => s + b.amount, 0);
-  const totalBAmount = teamBQueue.reduce((s: number, b: any) => s + b.amount, 0);
-  const nextTotalAAmount = nextTeamAQueue.reduce((s: number, b: any) => s + b.amount, 0);
-  const nextTotalBAmount = nextTeamBQueue.reduce((s: number, b: any) => s + b.amount, 0);
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const renderLiveQueue = (
-    queueA: any[], queueB: any[], booked: any[],
-    aName: string, bName: string,
-    totalA: number, totalB: number, bookedTotal: number
-  ) => {
-    const hasAnyBets = queueA.length > 0 || queueB.length > 0;
-
-    return (
-      <div>
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#004b6b", border: "1px solid #95deff40" }}>
-            <div className="text-xs text-gray-400 mb-1">{aName}</div>
-            <div className="text-lg font-bold" style={{ color: "#95deff" }}>{totalA}</div>
-            <div className="text-xs text-gray-400">{queueA.length} bet{queueA.length !== 1 ? "s" : ""}</div>
-          </div>
-          <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#1a0a2e", border: "1px solid #ffd70040" }}>
-            <div className="text-xs text-gray-400 mb-1">Matched Pool</div>
-            <div className="text-lg font-bold" style={{ color: "#ffd700" }}>{bookedTotal}</div>
-            <div className="text-xs text-gray-400">{booked.length} match{booked.length !== 1 ? "es" : ""}</div>
-          </div>
-          <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#004b6b", border: "1px solid #fa159340" }}>
-            <div className="text-xs text-gray-400 mb-1">{bName}</div>
-            <div className="text-lg font-bold" style={{ color: "#fa1593" }}>{totalB}</div>
-            <div className="text-xs text-gray-400">{queueB.length} bet{queueB.length !== 1 ? "s" : ""}</div>
-          </div>
-        </div>
-
-        {!hasAnyBets ? (
-          <div className="text-center py-8" style={{ color: "#4a7a8a" }}>
-            <Unlink className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">No bets placed yet for this game.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {/* Team A */}
-            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #95deff30" }}>
-              <div className="px-3 py-2 flex items-center gap-2" style={{ background: "linear-gradient(to right,#004b6b,#052240)" }}>
-                <Users className="h-3 w-3" style={{ color: "#95deff" }} />
-                <span className="text-sm font-bold" style={{ color: "#95deff" }}>{aName}</span>
-              </div>
-              {queueA.length === 0 ? (
-                <div className="px-3 py-4 text-center text-xs text-gray-500">No bets</div>
-              ) : (
-                queueA.map((bet: any) => (
-                  <div key={bet.id} className="flex items-center justify-between px-3 py-2" style={{ backgroundColor: "#052240", borderTop: "1px solid rgba(149,222,255,0.08)" }}>
-                    <div className="flex items-center gap-2">
-                      {bet.booked
-                        ? <Link className="h-3 w-3 flex-shrink-0" style={{ color: "#ffd700" }} />
-                        : <Unlink className="h-3 w-3 flex-shrink-0 opacity-30" style={{ color: "#95deff" }} />
-                      }
-                      <span className="text-sm text-white truncate max-w-[90px]">{bet.userName || "Unknown"}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Coins className="h-3 w-3" style={{ color: "#ffd700" }} />
-                      <span className="text-sm font-bold text-white">{bet.amount}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Team B */}
-            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #fa159330" }}>
-              <div className="px-3 py-2 flex items-center gap-2" style={{ background: "linear-gradient(to right,#3d0030,#052240)" }}>
-                <Users className="h-3 w-3" style={{ color: "#fa1593" }} />
-                <span className="text-sm font-bold" style={{ color: "#fa1593" }}>{bName}</span>
-              </div>
-              {queueB.length === 0 ? (
-                <div className="px-3 py-4 text-center text-xs text-gray-500">No bets</div>
-              ) : (
-                queueB.map((bet: any) => (
-                  <div key={bet.id} className="flex items-center justify-between px-3 py-2" style={{ backgroundColor: "#052240", borderTop: "1px solid rgba(250,21,147,0.08)" }}>
-                    <div className="flex items-center gap-2">
-                      {bet.booked
-                        ? <Link className="h-3 w-3 flex-shrink-0" style={{ color: "#ffd700" }} />
-                        : <Unlink className="h-3 w-3 flex-shrink-0 opacity-30" style={{ color: "#fa1593" }} />
-                      }
-                      <span className="text-sm text-white truncate max-w-[90px]">{bet.userName || "Unknown"}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Coins className="h-3 w-3" style={{ color: "#ffd700" }} />
-                      <span className="text-sm font-bold text-white">{bet.amount}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {(queueA.length > 0 || queueB.length > 0) && (
-          <div className="mt-3 flex items-center gap-3 text-xs" style={{ color: "#4a7a8a" }}>
-            <span className="flex items-center gap-1"><Link className="h-3 w-3" style={{ color: "#ffd700" }} /> matched</span>
-            <span className="flex items-center gap-1"><Unlink className="h-3 w-3 opacity-40" /> waiting</span>
-          </div>
-        )}
-      </div>
-    );
-  };
+function LiveQueue() {
+  const { game } = useGame();
+  const { teamAName, teamBName, teamAQueue, teamBQueue, bookedBets, totalBookedAmount } = game;
+  const bookedIds = new Set(bookedBets.flatMap(bb => [bb.betIdA, bb.betIdB]));
+  const hasAny = teamAQueue.length > 0 || teamBQueue.length > 0;
+  const matchedCount = bookedBets.length;
 
   return (
-    <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: "#020f1a" }}>
-      <div className="max-w-2xl mx-auto space-y-4">
-
-        {/* Header */}
-        <div className="rounded-2xl p-5 text-center shadow-[0_0_30px_rgba(250,21,147,0.5)]"
-          style={{ background: "linear-gradient(to right,#fa1593,#004b6b)", border: "2px solid #fa1593" }}>
-          <div className="flex items-center justify-center gap-3">
-            <BookOpen className="h-7 w-7 text-white" />
-            <h1 className="text-3xl font-black text-white tracking-widest">WHITEBOOK</h1>
-          </div>
-          <p className="text-sm text-white/70 mt-1">Live Betting Ledger — {teamAName} vs {teamBName}</p>
+    <div className="hud-panel bracket overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)]">
+        <div className="flex items-center gap-2">
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ background: 'var(--green)', boxShadow: '0 0 6px var(--green)', animation: 'liveDot 1s ease-in-out infinite' }}
+          />
+          <span className="mono text-xs tracking-widest" style={{ color: 'var(--green)' }}>LIVE — GAME #{game.currentGameNumber}</span>
         </div>
-
-        {/* Current game live queue */}
-        <div className="rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(149,222,255,0.15)]"
-          style={{ backgroundColor: "#052240", border: "2px solid #95deff30" }}>
-          <div className="px-5 py-3 flex items-center justify-between"
-            style={{ background: "linear-gradient(to right,#004b6b,#052240)" }}>
-            <div>
-              <div className="text-xs text-gray-400 uppercase tracking-widest">Live</div>
-              <div className="text-lg font-black text-white">GAME {currentGameNumber}</div>
-            </div>
-            <div className="text-xs" style={{ color: "#95deff" }}>
-              {teamAQueue.length + teamBQueue.length} bet{teamAQueue.length + teamBQueue.length !== 1 ? "s" : ""} active
-            </div>
-          </div>
-          <div className="p-4">
-            {renderLiveQueue(teamAQueue, teamBQueue, bookedBets, teamAName, teamBName, totalAAmount, totalBAmount, totalBookedAmount)}
-          </div>
+        <div className="flex items-center gap-3 mono text-xs">
+          <span style={{ color: 'var(--green)' }}>{matchedCount} MATCHED</span>
+          <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{totalBookedAmount * 2} ITM</span>
         </div>
+      </div>
 
-        {/* Next game queue — only show if bets exist */}
-        {(nextTeamAQueue.length > 0 || nextTeamBQueue.length > 0) && (
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#052240", border: "2px solid #fa159320" }}>
-            <button className="w-full px-5 py-3 flex items-center justify-between"
-              style={{ background: "linear-gradient(to right,#2a0020,#052240)" }}
-              onClick={() => setShowNextGame(v => !v)}>
-              <div>
-                <div className="text-xs text-gray-400 uppercase tracking-widest">Queued</div>
-                <div className="text-lg font-black text-white">GAME {currentGameNumber + 1}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: "#fa1593" }}>
-                  {nextTeamAQueue.length + nextTeamBQueue.length} bets
-                </span>
-                {showNextGame ? <ChevronUp className="h-4 w-4 text-white" /> : <ChevronDown className="h-4 w-4 text-white" />}
-              </div>
-            </button>
-            {showNextGame && (
-              <div className="p-4">
-                {renderLiveQueue(nextTeamAQueue, nextTeamBQueue, nextBookedBets, teamAName, teamBName, nextTotalAAmount, nextTotalBAmount, nextTotalBookedAmount)}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Completed games history — prefer live context, fall back to localStorage */}
-        {(() => { const history = betHistory.length > 0 ? betHistory : localHistory; return history.length > 0 && (
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#052240", border: "2px solid #fa159330" }}>
-            <div className="px-5 py-3" style={{ background: "linear-gradient(to right,#fa1593,#004b6b)" }}>
-              <div className="text-xs text-white/70 uppercase tracking-widest">Completed</div>
-              <div className="text-lg font-black text-white">Game History</div>
+      {!hasAny ? (
+        <div className="px-4 py-6 text-center text-xs text-[var(--text)] mono tracking-widest">
+          NO BETS PLACED YET
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 divide-x divide-[var(--border)]">
+          <div>
+            <div className="px-3 py-2 text-xs font-black uppercase tracking-widest border-b border-[var(--border)]"
+              style={{ color: 'var(--cyan)', background: 'rgba(0,229,255,0.04)' }}>
+              {teamAName}
             </div>
-            <div className="divide-y" style={{ borderColor: "rgba(250,21,147,0.1)" }}>
-              {[...history].reverse().map((record) => {
-                const isExpanded = expandedGame === record.id;
-                const winColor = record.winningTeam === "A" ? "#95deff" : "#fa1593";
-                const winName = record.winningTeam === "A" ? record.teamAName : record.teamBName;
+            {teamAQueue.length === 0
+              ? <div className="px-3 py-3 text-xs text-[var(--text)]">No bets</div>
+              : teamAQueue.map(bet => {
+                const matched = bookedIds.has(bet.id);
                 return (
-                  <div key={record.id} style={{ borderColor: "rgba(250,21,147,0.1)" }}>
-                    <button className="w-full px-4 py-3 flex items-center justify-between text-left"
-                      onClick={() => setExpandedGame(isExpanded ? null : record.id)}>
-                      <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded-full" style={{ backgroundColor: `${winColor}20` }}>
-                          <Trophy className="h-4 w-4" style={{ color: winColor }} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-white">Game #{record.gameNumber}</div>
-                          <div className="text-xs" style={{ color: winColor }}>{winName} Won</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-xs text-white">{record.totalAmount || 0} coins</div>
-                          <div className="text-xs text-gray-400">
-                            {(record.bets?.teamA?.length || 0) + (record.bets?.teamB?.length || 0)} bets
-                          </div>
-                        </div>
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
-                      </div>
-                    </button>
-
-                    {isExpanded && (
-                      <div className="px-4 pb-4">
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* Team A bets */}
-                          <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${record.winningTeam === "A" ? "#95deff40" : "#ffffff10"}` }}>
-                            <div className="px-3 py-2 text-xs font-bold" style={{ backgroundColor: "#004b6b", color: "#95deff" }}>
-                              {record.teamAName}
-                            </div>
-                            {(record.bets?.teamA || []).length === 0 ? (
-                              <div className="px-3 py-3 text-xs text-gray-500 text-center">No bets</div>
-                            ) : (
-                              record.bets.teamA.map((bet: any, i: number) => (
-                                <div key={i} className="px-3 py-2" style={{ borderTop: "1px solid rgba(149,222,255,0.08)" }}>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-white truncate max-w-[80px]">{bet.userName}</span>
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-xs font-bold" style={{ color: bet.won ? "#00ff88" : "#ff4466" }}>{bet.amount}</span>
-                                      <span className="text-xs" style={{ color: bet.won ? "#00ff88" : "#ff4466" }}>{bet.won ? "✓" : "✗"}</span>
-                                    </div>
-                                  </div>
-                                  {bet.startingBalance != null && (
-                                    <div className="text-xs mt-0.5" style={{ color: "rgba(149,222,255,0.5)" }}>
-                                      bal before: {bet.startingBalance}
-                                    </div>
-                                  )}
-                                </div>
-                              ))
-                            )}
-                          </div>
-
-                          {/* Team B bets */}
-                          <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${record.winningTeam === "B" ? "#fa159340" : "#ffffff10"}` }}>
-                            <div className="px-3 py-2 text-xs font-bold" style={{ backgroundColor: "#3d0030", color: "#fa1593" }}>
-                              {record.teamBName}
-                            </div>
-                            {(record.bets?.teamB || []).length === 0 ? (
-                              <div className="px-3 py-3 text-xs text-gray-500 text-center">No bets</div>
-                            ) : (
-                              record.bets.teamB.map((bet: any, i: number) => (
-                                <div key={i} className="px-3 py-2" style={{ borderTop: "1px solid rgba(250,21,147,0.08)" }}>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-white truncate max-w-[80px]">{bet.userName}</span>
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-xs font-bold" style={{ color: bet.won ? "#00ff88" : "#ff4466" }}>{bet.amount}</span>
-                                      <span className="text-xs" style={{ color: bet.won ? "#00ff88" : "#ff4466" }}>{bet.won ? "✓" : "✗"}</span>
-                                    </div>
-                                  </div>
-                                  {bet.startingBalance != null && (
-                                    <div className="text-xs mt-0.5" style={{ color: "rgba(250,21,147,0.5)" }}>
-                                      bal before: {bet.startingBalance}
-                                    </div>
-                                  )}
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  <div key={bet.id} className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)] last:border-0"
+                    style={{ borderLeft: `3px solid ${bet.color || 'transparent'}` }}>
+                    <span className="text-sm font-semibold truncate" style={{ color: bet.color || 'var(--text)' }}>{bet.userName}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="mono text-sm font-bold" style={{ color: matched ? 'var(--green)' : 'var(--cyan)' }}>{bet.amount}</span>
+                      {matched && <span className="text-xs" style={{ color: 'var(--green)' }}>✓</span>}
+                    </div>
                   </div>
                 );
-              })}
-            </div>
+              })
+            }
           </div>
-        )})()}
+          <div>
+            <div className="px-3 py-2 text-xs font-black uppercase tracking-widest border-b border-[var(--border)]"
+              style={{ color: 'var(--red)', background: 'rgba(255,0,64,0.04)' }}>
+              {teamBName}
+            </div>
+            {teamBQueue.length === 0
+              ? <div className="px-3 py-3 text-xs text-[var(--text)]">No bets</div>
+              : teamBQueue.map(bet => {
+                const matched = bookedIds.has(bet.id);
+                return (
+                  <div key={bet.id} className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)] last:border-0"
+                    style={{ borderLeft: `3px solid ${bet.color || 'transparent'}` }}>
+                    <span className="text-sm font-semibold truncate" style={{ color: bet.color || 'var(--text)' }}>{bet.userName}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="mono text-sm font-bold" style={{ color: matched ? 'var(--green)' : 'var(--red)' }}>{bet.amount}</span>
+                      {matched && <span className="text-xs" style={{ color: 'var(--green)' }}>✓</span>}
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-        {betHistory.length === 0 && localHistory.length === 0 && teamAQueue.length === 0 && teamBQueue.length === 0 && (
-          <div className="text-center py-6 text-gray-500 text-sm">
-            No bet activity yet. Bets placed in the betting queue will appear here.
+function HistoryCard({ record }: { record: GameRecord }) {
+  const [open, setOpen] = useState(false);
+  const isAWin = record.winningTeam === 'A';
+  const winnerName = isAWin ? record.teamAName : record.teamBName;
+  const winnerColor = isAWin ? 'var(--cyan)' : 'var(--red)';
+  const totalBets = record.bets.teamA.length + record.bets.teamB.length;
+
+  return (
+    <div className="hud-panel overflow-hidden">
+      <button
+        className="w-full flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+        onClick={() => setOpen(v => !v)}
+      >
+        <span className="mono text-xs flex-shrink-0" style={{ color: 'var(--text)', minWidth: 32 }}>
+          #{record.gameNumber}
+        </span>
+
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="font-bold text-sm truncate"
+            style={{ color: isAWin ? 'var(--cyan)' : 'var(--text)', textShadow: isAWin ? '0 0 2px rgba(0,229,255,0.4)' : 'none' }}>
+            {record.teamAName}
+          </span>
+          <span className="text-xs text-[var(--text)] flex-shrink-0">vs</span>
+          <span className="font-bold text-sm truncate"
+            style={{ color: !isAWin ? 'var(--red)' : 'var(--text)', textShadow: !isAWin ? '0 0 2px rgba(255,0,64,0.4)' : 'none' }}>
+            {record.teamBName}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 flex-shrink-0 mono text-xs">
+          {totalBets > 0 && (
+            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{record.totalAmount * 2} ITM</span>
+          )}
+          <span style={{ color: 'var(--text)' }}>{fmt(record.duration)}</span>
+          <span style={{ color: winnerColor, textShadow: `0 0 3px ${winnerColor}`, fontWeight: 900 }}>
+            {winnerName.toUpperCase()} ★
+          </span>
+          <span style={{ color: 'var(--text)' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-[var(--border)]">
+          {/* Winner banner */}
+          <div className="px-4 py-2 flex items-center gap-2"
+            style={{ background: isAWin ? 'rgba(0,229,255,0.06)' : 'rgba(255,0,64,0.06)' }}>
+            <span style={{ color: winnerColor, textShadow: `0 0 3px ${winnerColor}` }}>★</span>
+            <span className="mono text-xs font-black uppercase tracking-widest" style={{ color: winnerColor }}>
+              {winnerName} WINS
+            </span>
+            <span className="mono text-xs ml-auto" style={{ color: 'var(--text)' }}>
+              {record.teamABalls ?? record.teamAScore} – {record.teamBBalls ?? record.teamBScore} balls
+            </span>
+          </div>
+
+          {totalBets === 0 ? (
+            <div className="px-4 py-4 text-center text-xs text-[var(--text)] mono tracking-wider">
+              NO MATCHED BETS THIS GAME
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 divide-x divide-[var(--border)]">
+              {/* Team A */}
+              <div>
+                <div className="px-3 py-2 text-xs font-black uppercase tracking-widest border-b border-[var(--border)]"
+                  style={{ color: 'var(--cyan)', background: 'rgba(0,229,255,0.04)' }}>
+                  {record.teamAName}
+                </div>
+                {record.bets.teamA.length === 0
+                  ? <div className="px-3 py-3 text-xs text-[var(--text)]">No bets</div>
+                  : record.bets.teamA.map((bet, i) => (
+                    <div key={i} className="px-3 py-2 border-b border-[var(--border)] last:border-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">{bet.userName}</span>
+                        <div className="flex items-center gap-1.5 mono text-sm font-bold">
+                          <span style={{ color: bet.won ? 'var(--green)' : 'var(--red)' }}>
+                            {bet.won ? '+' : '-'}{bet.amount}
+                          </span>
+                          <span style={{ color: bet.won ? 'var(--green)' : 'var(--red)' }}>{bet.won ? '✓' : '✗'}</span>
+                        </div>
+                      </div>
+                      {bet.startingBalance != null && (
+                        <div className="mono text-xs mt-0.5" style={{ color: 'rgba(0,229,255,0.35)' }}>
+                          bal before: {bet.startingBalance}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
+              </div>
+
+              {/* Team B */}
+              <div>
+                <div className="px-3 py-2 text-xs font-black uppercase tracking-widest border-b border-[var(--border)]"
+                  style={{ color: 'var(--red)', background: 'rgba(255,0,64,0.04)' }}>
+                  {record.teamBName}
+                </div>
+                {record.bets.teamB.length === 0
+                  ? <div className="px-3 py-3 text-xs text-[var(--text)]">No bets</div>
+                  : record.bets.teamB.map((bet, i) => (
+                    <div key={i} className="px-3 py-2 border-b border-[var(--border)] last:border-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">{bet.userName}</span>
+                        <div className="flex items-center gap-1.5 mono text-sm font-bold">
+                          <span style={{ color: bet.won ? 'var(--green)' : 'var(--red)' }}>
+                            {bet.won ? '+' : '-'}{bet.amount}
+                          </span>
+                          <span style={{ color: bet.won ? 'var(--green)' : 'var(--red)' }}>{bet.won ? '✓' : '✗'}</span>
+                        </div>
+                      </div>
+                      {bet.startingBalance != null && (
+                        <div className="mono text-xs mt-0.5" style={{ color: 'rgba(255,0,64,0.35)' }}>
+                          bal before: {bet.startingBalance}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Whitebook() {
+  const { game, gameHistory, clearHistory, isAdmin } = useGame();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAdmin) navigate('/arena');
+  }, [isAdmin]);
+
+  if (!isAdmin) return null;
+
+  const totalITM = gameHistory.reduce((s, r) => s + r.totalAmount * 2, 0);
+  const totalGames = gameHistory.length;
+
+  return (
+    <div className="flex flex-col" style={{ minHeight: "100dvh" }} style={{ background: 'var(--bg)' }}>
+      <Header />
+
+      <main className="flex-1 w-full max-w-2xl mx-auto px-3 py-4 flex flex-col gap-3">
+
+        {/* Title row */}
+        <div className="hud-panel bracket px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-widest" style={{ color: 'var(--cyan)', textShadow: '0 0 8px rgba(0,229,255,0.2)' }}>
+              Whitebook
+            </h1>
+            <p className="mono text-xs text-[var(--text)] tracking-wider mt-0.5">LEDGER — ALL BETS ON RECORD</p>
+          </div>
+          <div className="flex items-center gap-4">
+            {totalGames > 0 && (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="mono text-sm font-black" style={{ color: 'var(--gold)', textShadow: '0 0 3px rgba(255,215,0,0.5)' }}>
+                  {totalITM.toLocaleString()}
+                </span>
+                <span className="mono text-xs text-[var(--text)]">ALL-TIME ITM</span>
+              </div>
+            )}
+            {isAdmin && gameHistory.length > 0 && (
+              <button
+                className="btn btn-ghost px-3 py-1.5 text-xs"
+                onClick={() => confirm('Clear all history?') && clearHistory()}
+              >
+                CLEAR
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Live queue */}
+        <LiveQueue />
+
+        {/* History */}
+        {gameHistory.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3 px-1">
+              <span className="mono text-xs text-[var(--text)] tracking-widest">GAME HISTORY</span>
+              <div className="flex-1 border-t border-[var(--border)]" />
+              <span className="mono text-xs text-[var(--text)]">{totalGames} GAMES</span>
+            </div>
+            {gameHistory.map(r => <HistoryCard key={r.id} record={r} />)}
+          </div>
+        ) : (
+          <div className="hud-panel px-4 py-10 text-center flex flex-col items-center gap-2">
+            <span className="text-2xl" style={{ color: 'var(--text)', opacity: 0.3 }}>◈</span>
+            <span className="mono text-xs text-[var(--text)] tracking-widest">
+              NO COMPLETED GAMES YET — HISTORY APPEARS HERE AFTER EACH WIN
+            </span>
           </div>
         )}
 
-      </div>
+      </main>
     </div>
   );
-};
-
-export default Whitebook;
+}

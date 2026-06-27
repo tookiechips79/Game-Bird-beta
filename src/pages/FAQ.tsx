@@ -1,318 +1,246 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
-import { ChevronDown, ChevronUp, ArrowLeft, HelpCircle } from "lucide-react";
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import Header from '@/components/layout/Header';
 
-const FAQ = () => {
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+function Section({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <h2 className="text-2xl font-black uppercase tracking-widest" style={{ color: 'var(--cyan)', whiteSpace: 'nowrap' }}>
+        {title}
+      </h2>
+      <div className="flex-1 border-t border-[var(--border)]" />
+    </div>
+  );
+}
 
-  const toggleItem = (id: string) => {
-    setExpandedItems(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+const faqItems = [
+  {
+    id: 'betting',
+    category: 'Betting System',
+    question: 'How do I place a bet?',
+    answer: 'To place a bet, select a player (Player A or Player B) and click the bet button for your desired denomination (10, 50, or 100 Sweep Coins). Your bet is instantly added to the queue — no confirmation needed. You can place multiple bets on the same player or alternate between players. As long as a bet hasn\'t been matched yet, you can delete it from the queue at any time.',
+  },
+  {
+    id: 'denominations',
+    category: 'Betting System',
+    question: 'What are the available bet denominations?',
+    answer: 'You can bet in three denominations: 10, 50, or 100 Sweep Coins. Tap any amount button in the betting queue to instantly place that bet. These standard amounts provide flexibility for different betting preferences and strategies during the game.',
+  },
+  {
+    id: 'booked',
+    category: 'Betting System',
+    question: "What does 'Booked Bets' mean?",
+    answer: "Booked Bets are bets that have been successfully matched with an opposing bet of the same amount. When you place a bet on Player A or Player B, it enters the betting queue. Once a matching bet is found on the opposing player, both bets are paired and marked as Booked — shown with a ✓ BOOKED label in the queue. This creates a balanced 1:1 betting pair for that game.",
+  },
+  {
+    id: 'queue-priority',
+    category: 'Betting System',
+    question: 'How does the betting queue work with priority?',
+    answer: 'The betting queue operates on a strict FIRST-IN, FIRST-OUT (FIFO) priority system. When you place a bet, it\'s added to the back of your player\'s queue. The first bet placed is the first one in line to be matched. This ensures complete fairness — all bets are processed in the exact order they were placed, creating a transparent and predictable betting environment.',
+  },
+  {
+    id: 'auto-matching',
+    category: 'Betting System',
+    question: 'How does automatic bet matching work?',
+    answer: "Automatic matching happens instantly when there's a compatible bet on the opposing player. When you place a bet on Player A, the system checks Player B's queue for the first available matching bet (same amount). If one exists, both bets are immediately matched and marked as 'Booked'. If no matching bet exists, your bet waits in the queue.",
+  },
+  {
+    id: 'matching-order',
+    category: 'Betting System',
+    question: 'Which bets get matched first?',
+    answer: "Bets are matched in strict order-based priority. Your bet will match with the FIRST OPEN BET in the opposing player's queue of the same amount. The matching respects both player priority AND bet amount to ensure fairness.",
+  },
+  {
+    id: 'bet-queue-example',
+    category: 'Betting System',
+    question: 'Can you explain a betting queue example?',
+    answer: "Sure! Let's say Player A queue has: [100, 50, 10] and Player B queue has: [50, 100]. When you place a new 100-coin bet on Player B: (1) The system finds the first open 100-coin bet on Player A, (2) Those two bets instantly match and are marked 'Booked', (3) Your bet is now locked in as matched. If you placed a 25-coin bet instead, it wouldn't match anything — it would sit in the queue waiting.",
+  },
+  {
+    id: 'coins',
+    category: 'Account & Credits',
+    question: 'How do I reload my Sweep Coins?',
+    answer: "You can reload your Sweep Coins by clicking the Get Coins tab in the navigation. Choose a quick amount or enter a custom value, then submit — your balance updates immediately. Admins can also load coins directly to any account on your behalf.",
+  },
+  {
+    id: 'membership',
+    category: 'Account & Credits',
+    question: 'What is the membership system?',
+    answer: 'The membership system offers premium features and benefits. When you purchase a membership, you get enhanced access to betting features and exclusive updates. Your membership status is displayed in your account profile, and you can manage or cancel your membership at any time.',
+  },
+  {
+    id: 'cancel-membership',
+    category: 'Account & Credits',
+    question: 'Can I cancel my membership?',
+    answer: 'Yes, you can cancel your membership at any time from your account settings. When you cancel, your membership will remain active until the end of your current billing period. After that, your account will return to standard status.',
+  },
+  {
+    id: 'what-are-sweep-coins',
+    category: 'Account & Credits',
+    question: 'What are Sweep Coins?',
+    answer: 'Sweep Coins are the virtual currency used in Game Bird for placing bets. They represent your betting value and are used exclusively for wagering on games. Sweep Coins are independent from real money and are managed within the app for gaming purposes only.',
+  },
+  {
+    id: 'earn-sweep-coins',
+    category: 'Account & Credits',
+    question: 'How can I earn Sweep Coins?',
+    answer: 'You can earn Sweep Coins through several ways: by winning matched bets (when your player wins), by receiving promotional bonuses, through membership rewards, or by reloading them in the app. Winning bets increases your balance — check your dashboard to see all your transactions and earnings.',
+  },
+  {
+    id: 'sweep-coins-balance',
+    category: 'Account & Credits',
+    question: 'Where can I see my Sweep Coins balance?',
+    answer: 'Your current Sweep Coins balance is displayed prominently in the wallet widget at the top of the Arena. It updates in real-time as you place bets or complete transactions. Click on your wallet to view detailed transaction history.',
+  },
+  {
+    id: 'reload-amounts',
+    category: 'Account & Credits',
+    question: 'What reload amounts are available for Sweep Coins?',
+    answer: 'Game Bird offers flexible reload options. Quick amounts available are 10, 20, 50, 100, 200, and 500 Sweep Coins. You can also enter a custom amount. Your balance updates immediately once an admin completes the reload.',
+  },
+  {
+    id: 'sweep-coins-reset',
+    category: 'Account & Credits',
+    question: 'Do Sweep Coins expire or reset?',
+    answer: 'Sweep Coins do not expire — they remain in your account indefinitely until you use them for betting. Your balance persists across gaming sessions, so you can accumulate and use your Sweep Coins whenever you want.',
+  },
+  {
+    id: 'scoreboard',
+    category: 'Game Features',
+    question: 'What information does the Scoreboard show?',
+    answer: 'The Scoreboard displays real-time game information including: current game number, player scores (games won), balls remaining for each player, timer status, break status (which player has the break), and live game updates. It provides a complete view of the current match state.',
+  },
+  {
+    id: 'history',
+    category: 'Records & Transparency',
+    question: 'How can I view my bet history?',
+    answer: 'Your bet history and transactions are accessible directly from your wallet — open the wallet and use the BETS or TXN tabs to view your activity. Receipts for every matched bet are also available under the RECEIPTS tab.',
+  },
+  {
+    id: 'receipts',
+    category: 'Records & Transparency',
+    question: 'What are Bet Receipts?',
+    answer: 'Bet Receipts are confirmations issued for every matched bet. Each receipt contains details such as the bet amount, player selection, game number, and win/loss result. These receipts are accessible from your wallet widget and serve as proof of your betting activity.',
+  },
+  {
+    id: 'fair',
+    category: 'Fair Play & Rules',
+    question: 'How do you ensure fair play?',
+    answer: 'Game Bird implements multiple safeguards: immutable bet ledger for transparency, complete transaction history, real-time scoreboard updates, and secure admin controls. All betting activity is recorded and verifiable, ensuring complete fairness and accountability.',
+  },
+  {
+    id: 'odds',
+    category: 'Fair Play & Rules',
+    question: 'What odds are used?',
+    answer: 'The betting system uses straightforward 1:1 odds where matched bets create balanced pairs. When your bet is matched with an opposing player bet of the same amount, both bets are booked at 1:1 — ensuring fairness for all participants.',
+  },
+  {
+    id: 'pwa',
+    category: 'Technical',
+    question: 'Can I use Game Bird on mobile?',
+    answer: 'Yes! Game Bird is fully responsive and works on phones, tablets, and desktops. You can also install it as a Progressive Web App (PWA) on your device for a native app-like experience. Look for the install prompt in your browser to add it to your home screen.',
+  },
+  {
+    id: 'support',
+    category: 'Support',
+    question: 'Where can I get help?',
+    answer: 'For support, check this FAQ page first for answers to common questions. If you need additional assistance, visit the About page for more information about Game Bird or contact the admin directly through the platform.',
+  },
+];
 
-  const faqItems = [
-    {
-      id: "betting",
-      category: "Betting System",
-      question: "How do I place a bet?",
-      answer: "To place a bet, select a team (Team A or Team B) and choose an amount from the available denominations (10, 50, or 100 Sweep Coins). Once you click the bet button, a confirmation dialog will appear. Confirm the bet, and it will be added to the betting queue. You can place multiple bets on the same team or alternate between teams."
-    },
-    {
-      id: "denominations",
-      category: "Betting System",
-      question: "What are the available bet denominations?",
-      answer: "You can bet in three denominations: 10 Sweep Coins, 50 Sweep Coins, or 100 Sweep Coins. These standard amounts provide flexibility for different betting preferences and strategies during the game."
-    },
-    {
-      id: "booked",
-      category: "Betting System",
-      question: "What does 'Booked Bets' mean?",
-      answer: "Booked Bets are bets that have been confirmed and are ready to be matched. When you place a bet on Team A or Team B, it enters the betting queue. Once a matching bet appears on the opposite team, both bets are highlighted to show they've been matched (booked). This creates a balanced betting pair for that round."
-    },
-    {
-      id: "queue-priority",
-      category: "Betting System",
-      question: "How does the betting queue work with priority?",
-      answer: "The betting queue operates on a strict FIRST-IN, FIRST-OUT (FIFO) priority system. When you place a bet, it's added to the back of your team's queue. The first bet placed is the first one in line to be matched. This ensures complete fairness - all bets are processed in the exact order they were placed, creating a transparent and predictable betting environment."
-    },
-    {
-      id: "auto-matching",
-      category: "Betting System",
-      question: "How does automatic bet matching work?",
-      answer: "Automatic matching happens instantly when there's a compatible bet on the opposite team. Here's how it works: When you place a bet on Team A, the system checks Team B's queue for the first available matching bet (same amount). If one exists, both bets are immediately matched and marked as 'Booked'. If no matching bet exists on Team B, your bet waits in the Team A queue for someone to place the same amount on Team B."
-    },
-    {
-      id: "matching-order",
-      category: "Betting System",
-      question: "Which bets get matched first?",
-      answer: "Bets are matched in strict order-based priority. Your bet will match with the FIRST OPEN BET in the opposite team's queue. For example: If Team B has three pending bets (10 coins, 50 coins, 100 coins placed in that order), and you place a 50-coin bet on Team A, it will match with the first 50-coin bet in Team B's queue - not the first bet overall. The matching respects both team priority AND bet amount to ensure fairness."
-    },
-    {
-      id: "bet-queue-example",
-      category: "Betting System",
-      question: "Can you explain a betting queue example?",
-      answer: "Sure! Let's say Team A queue has: [100 coins, 50 coins, 10 coins] and Team B queue has: [50 coins, 100 coins]. When you place a new 100-coin bet on Team B: (1) The system finds the first open 100-coin bet on Team A (the first one), (2) Those two bets instantly match and are marked 'Booked', (3) Your bet is now locked in as matched. If you placed a 25-coin bet instead, it wouldn't match anything because no 25-coin bet exists on the opposite team - it would sit in the queue waiting(open)."
-    },
-    {
-      id: "coins",
-      category: "Account & Credits",
-      question: "How do I reload my Sweep Coins?",
-      answer: "You can reload your Sweep Coins by clicking on your user profile and selecting 'Reload Coins', or by navigating to the Reload Coins page. Choose your desired amount and complete the transaction. Your balance will be updated immediately."
-    },
-    {
-      id: "membership",
-      category: "Account & Credits",
-      question: "What is the membership system?",
-      answer: "The membership system offers premium features and benefits. When you purchase a membership, you get enhanced access to betting features and exclusive updates. Your membership status is displayed in your account profile, and you can manage or cancel your membership at any time."
-    },
-    {
-      id: "cancel-membership",
-      category: "Account & Credits",
-      question: "Can I cancel my membership?",
-      answer: "Yes, you can cancel your membership at any time from your account settings. When you cancel, your membership will remain active until the end of your current billing period. After that, your account will return to standard status."
-    },
-    {
-      id: "what-are-sweep-coins",
-      category: "Account & Credits",
-      question: "What are Sweep Coins?",
-      answer: "Sweep Coins are the virtual currency used in Game Bird for placing bets. They represent your betting value and are used exclusively for wagering on games. Sweep Coins are independent from real money and are managed within the app for gaming purposes only. You can earn or reload Sweep Coins to participate in the betting system."
-    },
-    {
-      id: "earn-sweep-coins",
-      category: "Account & Credits",
-      question: "How can I earn Sweep Coins?",
-      answer: "You can earn Sweep Coins through several ways: by winning matched bets (when your team wins), by receiving promotional bonuses, through membership rewards, or by reloading them in the app. Your account starts with a certain amount of Sweep Coins, and winning bets increases your balance. Check your user dashboard to see all your Sweep Coin transactions and earnings."
-    },
-    {
-      id: "sweep-coins-balance",
-      category: "Account & Credits",
-      question: "Where can I see my Sweep Coins balance?",
-      answer: "Your current Sweep Coins balance is displayed prominently in your user profile/dashboard at the top right of the screen. It updates in real-time as you place bets or complete transactions. You can click on the balance to view detailed transaction history and see how your coins have changed over time."
-    },
-    {
-      id: "reload-amounts",
-      category: "Account & Credits",
-      question: "What reload amounts are available for Sweep Coins?",
-      answer: "Game Bird offers flexible reload options to suit different needs. You can reload in various amounts including 100, 200, 500, and higher denominations. Visit the 'Reload Coins' page to see all current reload options and choose the amount that works best for you. Your balance updates immediately upon completing a reload transaction."
-    },
-    {
-      id: "sweep-coins-reset",
-      category: "Account & Credits",
-      question: "Do Sweep Coins expire or reset?",
-      answer: "Sweep Coins do not expire - they remain in your account indefinitely until you use them for betting. Your balance persists across gaming sessions, so you can accumulate and use your Sweep Coins whenever you want. However, check the game rules for any specific session-based reset policies that may apply."
-    },
-    {
-      id: "scoreboard",
-      category: "Game Features",
-      question: "What information does the Scoreboard show?",
-      answer: "The Scoreboard displays real-time game information including: current game number, team scores (games won), balls remaining for each team, timer status, break status (which team has the break), and live game updates. It provides a complete view of the current match state."
-    },
-    {
-      id: "admin",
-      category: "Game Features",
-      question: "What are admin controls?",
-      answer: "Admin controls allow administrators to manage the game state, including starting matches, updating scores, managing balls, handling game rounds, and controlling the timer. Admin mode is protected by a password and can be locked/unlocked with the admin button in the scoreboard header."
-    },
-    {
-      id: "history",
-      category: "Records & Transparency",
-      question: "How can I view my bet history?",
-      answer: "Your complete bet history is available in your user profile or the User Dashboard. You can see all placed bets, matched bets, game results, and transaction history. This provides full transparency and a permanent record of your betting activity."
-    },
-    {
-      id: "ledger",
-      category: "Records & Transparency",
-      question: "What is the Bet Ledger?",
-      answer: "The Bet Ledger is an immutable record of all bets placed during a game session. It ensures complete transparency and fairness by maintaining a permanent, unalterable log of every bet. This guarantees that all betting activity is tracked and verifiable."
-    },
-    {
-      id: "receipts",
-      category: "Records & Transparency",
-      question: "What are Bet Receipts?",
-      answer: "Bet Receipts are confirmations issued for every bet placed. Each receipt contains details such as the bet amount, team selection, timestamp, and confirmation status. These receipts serve as proof of your betting activity and are stored for your records."
-    },
-    {
-      id: "fair",
-      category: "Fair Play & Rules",
-      question: "How do you ensure fair play?",
-      answer: "Game Bird implements multiple safeguards: immutable bet ledger for transparency, complete transaction history, real-time scoreboard updates, and secure admin controls. All betting activity is recorded and verifiable, ensuring complete fairness and accountability."
-    },
-    {
-      id: "odds",
-      category: "Fair Play & Rules",
-      question: "What odds are used?",
-      answer: "The betting system uses straightforward odds where matched bets create balanced pairs. When your bet is matched with an opposite team's bet of the same amount, both bets are booked at 1:1 odds, ensuring fairness for all participants."
-    },
-    {
-      id: "pwa",
-      category: "Technical",
-      question: "What is a PWA (Progressive Web App)?",
-      answer: "Game Bird is a Progressive Web App, which means you can use it in your web browser and also install it on your device for a native app-like experience. You can access it offline and receive notifications. Look for the install prompt in your browser to add it to your home screen."
-    },
-    {
-      id: "support",
-      category: "Support",
-      question: "Where can I get help?",
-      answer: "For support, check this FAQ page first for answers to common questions. If you need additional assistance, you can contact the support team through the app or visit the About page for more information about Game Bird."
-    }
-  ];
+const categories = Array.from(new Set(faqItems.map(item => item.category)));
 
-  const categories = Array.from(new Set(faqItems.map(item => item.category)));
+export default function FAQ() {
+  const [expanded, setExpanded] = useState<string[]>([]);
+
+  const toggle = (id: string) =>
+    setExpanded(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   return (
-    <div className="min-h-screen pb-12" style={{ backgroundColor: '#0a1e2e' }}>
-      {/* Sticky Navigation Bar */}
-      <nav className="sticky top-0 z-50 border-b" style={{ backgroundColor: '#004b6b', borderColor: '#95deff', backdropFilter: 'blur(10px)' }}>
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img 
-              src="/lovable-uploads/4dfcf9c9-cbb9-4a75-94ab-bcdb38a8091e.png" 
-              alt="Game Bird Logo" 
-              className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(149,222,255,0.3)]"
-            />
-            <span className="text-xl font-bold" style={{ color: '#95deff', textShadow: '0 0 10px rgba(149, 222, 255, 0.5)' }}>Game Bird</span>
-          </div>
-          <div className="flex gap-4 items-center">
-            <Link to="/">
-              <Button variant="ghost" style={{ color: '#95deff' }} className="hover:bg-[#004b6b]/70">
-                Home
-              </Button>
-            </Link>
-            <Link to="/about">
-              <Button variant="ghost" style={{ color: '#95deff' }} className="hover:bg-[#004b6b]/70">
-                About
-              </Button>
-            </Link>
-            <Link to="/features">
-              <Button variant="ghost" style={{ color: '#95deff' }} className="hover:bg-[#004b6b]/70">
-                Features
-              </Button>
-            </Link>
-            <Link to="/betting-queue">
-              <Button className="font-bold flex items-center gap-2" style={{ backgroundColor: '#fa1593', color: 'white' }}>
-                Betting
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="flex flex-col" style={{ minHeight: '100dvh', position: 'relative' }}>
+      {/* Background */}
+      <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url(https://www.thescroller.net/wp-content/uploads/2025/03/oldschoolcoolbilliards10.png)', backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,4,18,0.35)', zIndex: 1 }} />
 
-      <div className="max-w-4xl mx-auto px-4 pt-12">
-        {/* Header */}
-        <div className="mb-12">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <Button variant="outline" size="sm" style={{ borderColor: '#95deff', color: '#95deff' }}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header />
 
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <HelpCircle className="h-8 w-8" style={{ color: '#fa1593' }} />
-              <h1 className="text-4xl font-bold text-white">Frequently Asked Questions</h1>
-            </div>
-            <p className="text-lg" style={{ color: '#95deff' }}>
-              Find answers to common questions about Game Bird Betting
+        <main className="flex-1 w-full max-w-2xl mx-auto px-3 py-6 flex flex-col gap-8">
+
+          {/* Hero */}
+          <div className="hud-panel bracket px-6 py-8 text-center flex flex-col items-center gap-3"
+            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+            <div className="mono text-xs tracking-[0.4em] text-[var(--text)] uppercase">Help Center</div>
+            <h1 className="font-black uppercase tracking-widest leading-none"
+              style={{ fontSize: 'clamp(1.8rem,7vw,3rem)', color: 'var(--cyan)' }}>
+              Frequently Asked<br />
+              <span style={{ color: 'var(--gold)' }}>Questions</span>
+            </h1>
+            <p className="text-sm max-w-md leading-relaxed" style={{ color: 'var(--text)' }}>
+              Find answers to common questions about the Game Bird betting platform.
             </p>
           </div>
-        </div>
 
-        {/* FAQ by Category */}
-        {categories.map(category => (
-          <div key={category} className="mb-12">
-            <h2 
-              className="text-2xl font-bold mb-6 pb-3 border-b-2"
-              style={{ color: '#fa1593', borderColor: '#fa1593' }}
-            >
-              {category}
-            </h2>
-
-            <div className="space-y-4">
-              {faqItems
-                .filter(item => item.category === category)
-                .map(item => (
-                  <Card
-                    key={item.id}
-                    className="overflow-hidden transition-all cursor-pointer hover:shadow-lg"
-                    style={{
-                      backgroundColor: '#052240',
-                      borderColor: '#95deff',
-                      borderWidth: '2px'
-                    }}
-                    onClick={() => toggleItem(item.id)}
-                  >
-                    <CardHeader className="pb-3" style={{ background: 'linear-gradient(to right, #fa1593, #004b6b)' }}>
-                      <div className="flex items-center justify-between">
-                        <CardTitle 
-                          className="text-lg font-semibold text-white"
-                        >
+          {/* FAQ Categories */}
+          {categories.map(category => (
+            <div key={category}>
+              <Section title={category} />
+              <div className="flex flex-col gap-2">
+                {faqItems.filter(item => item.category === category).map(item => {
+                  const open = expanded.includes(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className="hud-panel overflow-hidden"
+                      style={{ background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(4px)', cursor: 'pointer' }}
+                      onClick={() => toggle(item.id)}
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <span className="font-black uppercase tracking-wide text-sm" style={{ color: open ? 'var(--cyan)' : 'var(--text)' }}>
                           {item.question}
-                        </CardTitle>
-                        <div className="ml-4">
-                          {expandedItems.includes(item.id) ? (
-                            <ChevronUp className="h-6 w-6" style={{ color: '#fa1593' }} />
-                          ) : (
-                            <ChevronDown className="h-6 w-6" style={{ color: '#95deff' }} />
-                          )}
-                        </div>
+                        </span>
+                        <span className="mono font-black flex-shrink-0 text-sm" style={{ color: 'var(--cyan)' }}>
+                          {open ? '▲' : '▼'}
+                        </span>
                       </div>
-                    </CardHeader>
+                      {open && (
+                        <div className="px-4 pb-4 border-t border-[var(--border)]" style={{ paddingTop: 10 }}>
+                          <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>
+                            {item.answer}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
-                    {expandedItems.includes(item.id) && (
-                      <CardContent className="pt-4 pb-4" style={{ backgroundColor: '#004b6b' }}>
-                        <p className="text-base leading-relaxed" style={{ color: 'white' }}>
-                          {item.answer}
-                        </p>
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
+          {/* CTA */}
+          <div className="hud-panel bracket px-6 py-8 text-center flex flex-col items-center gap-4"
+            style={{ border: '1px solid var(--gold)', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+            <div className="text-xl font-black uppercase tracking-widest" style={{ color: 'var(--gold)' }}>
+              Still Have Questions?
+            </div>
+            <p className="text-sm max-w-md leading-relaxed" style={{ color: 'var(--text)' }}>
+              Check out our other resources or head straight to the arena.
+            </p>
+            <div className="flex gap-3 mt-1 flex-wrap justify-center">
+              <Link to="/arena" className="btn btn-cyan px-8 py-3 text-sm" style={{ textDecoration: 'none' }}>
+                ▶ ENTER ARENA
+              </Link>
+              <Link to="/about" className="btn btn-ghost px-8 py-3 text-sm" style={{ textDecoration: 'none' }}>
+                ABOUT US
+              </Link>
+              <Link to="/terms" className="btn btn-ghost px-8 py-3 text-sm" style={{ textDecoration: 'none' }}>
+                TERMS
+              </Link>
             </div>
           </div>
-        ))}
 
-        {/* Still Have Questions */}
-        <Card 
-          className="mt-12 border-2"
-          style={{
-            backgroundColor: '#052240',
-            borderColor: '#fa1593',
-            boxShadow: '0 0 30px rgba(250, 21, 147, 0.3)'
-          }}
-        >
-          <CardContent className="p-8 text-center">
-            <h3 className="text-2xl font-bold mb-4 text-white">Still Have Questions?</h3>
-            <p className="mb-6" style={{ color: 'white' }}>
-              Can't find the answer you're looking for? Check out our other resources or contact support.
-            </p>
-            <div className="flex gap-4 justify-center flex-wrap">
-              <Link to="/about">
-                <Button 
-                  className="px-6 py-2 text-white font-semibold"
-                  style={{ backgroundColor: '#fa1593' }}
-                >
-                  Learn More About Us
-                </Button>
-              </Link>
-              <Link to="/">
-                <Button 
-                  variant="outline" 
-                  className="px-6 py-2"
-                  style={{ borderColor: '#95deff', color: '#95deff' }}
-                >
-                  Back to Home
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        </main>
       </div>
     </div>
   );
-};
-
-export default FAQ;
+}
