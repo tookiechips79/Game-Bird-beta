@@ -61,7 +61,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const serverUrl = window.location.hostname === 'localhost'
       ? `http://localhost:3001`
       : 'https://gamebird-app-production.up.railway.app';
-    const socket = io(serverUrl, { transports: ['polling', 'websocket'] });
+    const socket = io(serverUrl, { transports: ['polling'], upgrade: false });
     socketRef.current = socket;
 
     socket.on('users:state', (incoming: User[]) => {
