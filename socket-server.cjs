@@ -26,6 +26,11 @@ io.on('connection', (socket) => {
     let state = newState;
     let serverModified = false;
 
+    // Reset stamp tracker when timer is cleared (game reset/win)
+    if (!newState.timerStartedAt) {
+      lastStampedClientTs = null;
+    }
+
     if (newState.isTimerRunning && newState.timerStartedAt &&
         newState.timerStartedAt !== lastStampedClientTs) {
       lastStampedClientTs = newState.timerStartedAt;
