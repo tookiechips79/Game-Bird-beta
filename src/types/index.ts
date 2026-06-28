@@ -10,7 +10,12 @@ export type TransactionType =
   | 'cashout'
   | 'membership_activate'
   | 'membership_cancel'
-  | 'membership_renew';
+  | 'membership_renew'
+  | 'transfer_sent'
+  | 'transfer_received'
+  | 'challenge_escrow'
+  | 'challenge_win'
+  | 'challenge_refund';
 
 export interface Transaction {
   id: string;
@@ -124,4 +129,61 @@ export interface GameState {
   isTimerRunning: boolean;
   timerVersion?: number;
   lastWinner: 'A' | 'B' | null;
+}
+
+export interface GameBalanceSnapshot {
+  id: string;
+  gameNumber: number;
+  timestamp: number;
+  winningTeam: 'A' | 'B';
+  totalBefore: number;
+  totalAfter: number;
+  players: { userId: string; name: string; before: number; after: number }[];
+}
+
+export type AdminAuditEventType = 'admin_add' | 'admin_deduct' | 'user_created' | 'user_deleted' | 'reload' | 'tip';
+
+export interface AdminAuditEvent {
+  id: string;
+  timestamp: number;
+  type: AdminAuditEventType;
+  description: string;
+  amount: number;
+  userName?: string;
+  fromUserName?: string;
+  toUserName?: string;
+  balanceBefore?: number;
+  balanceAfter?: number;
+}
+
+export type ChallengeStatus = 'pending' | 'accepted' | 'judged' | 'cancelled';
+
+export interface Challenge {
+  id: string;
+  creatorId: string;
+  creatorName: string;
+  opponentId: string;
+  opponentName: string;
+  amount: number;
+  judgeToken: string;
+  judgePhone: string;
+  judgeLink?: string;
+  myPlayer: string;
+  theirPlayer: string;
+  status: ChallengeStatus;
+  winnerId?: string;
+  winnerName?: string;
+  createdAt: number;
+  acceptedAt?: number;
+  judgedAt?: number;
+}
+
+export interface CoinAuditEntry {
+  id: string;
+  timestamp: number;
+  expected: number;
+  actual: number;
+  drift: number;
+  trigger: string;
+  acknowledged: boolean;
 }

@@ -23,8 +23,9 @@ function formatDescription(m: Metadata): string {
   return parts.join('  ★  ');
 }
 
-export default function GameDescription() {
-  const { game, isAdmin, updateGame } = useGame();
+export default function GameDescription({ hideAdminControls }: { hideAdminControls?: boolean }) {
+  const { game, isAdmin: isAdminCtx, updateGame } = useGame();
+  const isAdmin = isAdminCtx && !hideAdminControls;
   const description = game.gameDescription || '';
   const [editing, setEditing] = useState(false);
   const [meta, setMeta] = useState<Metadata>(empty);
@@ -67,60 +68,76 @@ export default function GameDescription() {
 
   if (editing) {
     return (
-      <div className="hud-panel bracket w-full px-4 py-3 flex flex-col gap-3">
-        <div className="text-xs mono text-[var(--text)] tracking-widest">GAME INFO</div>
+      <>
+        {/* Backdrop */}
+        <div className="fixed inset-0 z-[200]" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setEditing(false)} />
 
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { key: 'playerA', label: 'Player A' },
-            { key: 'playerB', label: 'Player B' },
-          ].map(({ key, label }) => (
-            <div key={key} className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--text)] mono tracking-wider">{label}</span>
+        {/* Modal */}
+        <div className="fixed z-[201] top-1/2 left-1/2" style={{ transform: 'translate(-50%, -50%)', width: '90%', maxWidth: 520, background: '#0a0a18', border: '1px solid var(--gold)', padding: 28 }}>
+          <div className="flex items-center justify-between mb-5">
+            <span className="mono text-sm font-black tracking-[0.25em] uppercase" style={{ color: 'var(--gold)' }}>Game Info</span>
+            <button className="btn btn-ghost px-2 py-1 text-xs" onClick={() => setEditing(false)}>✕</button>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: 'playerA', label: 'Player A' },
+                { key: 'playerB', label: 'Player B' },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex flex-col gap-1.5">
+                  <span className="text-xs mono tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>{label}</span>
+                  <input
+                    autoFocus={key === 'playerA'}
+                    className="bg-transparent border border-[var(--border)] px-3 py-2 text-sm mono outline-none focus:border-[var(--cyan)]"
+                    style={{ color: 'var(--text)' }}
+                    placeholder={label}
+                    value={(meta as any)[key]}
+                    onChange={e => setMeta(p => ({ ...p, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { key: 'spot', label: 'Spot / Game Type' },
+                { key: 'raceTo', label: 'Race To' },
+                { key: 'amountBet', label: 'Stake ($)' },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex flex-col gap-1.5">
+                  <span className="text-xs mono tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>{label}</span>
+                  <input
+                    className="bg-transparent border border-[var(--border)] px-3 py-2 text-sm mono outline-none focus:border-[var(--cyan)]"
+                    style={{ color: 'var(--text)' }}
+                    placeholder={label}
+                    value={(meta as any)[key]}
+                    onChange={e => setMeta(p => ({ ...p, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs mono tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Location</span>
               <input
-                className="bg-transparent border border-[var(--border)] px-3 py-1.5 text-sm mono outline-none placeholder:text-[var(--text)] focus:border-[var(--cyan)]"
-                placeholder={label}
-                value={(meta as any)[key]}
-                onChange={e => setMeta(p => ({ ...p, [key]: e.target.value }))}
+                className="bg-transparent border border-[var(--border)] px-3 py-2 text-sm mono outline-none focus:border-[var(--cyan)]"
+                style={{ color: 'var(--text)' }}
+                placeholder="Location"
+                value={meta.location}
+                onChange={e => setMeta(p => ({ ...p, location: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
               />
             </div>
-          ))}
-        </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { key: 'spot', label: 'Spot / Game Type' },
-            { key: 'raceTo', label: 'Race To' },
-            { key: 'amountBet', label: 'Stake ($)' },
-          ].map(({ key, label }) => (
-            <div key={key} className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--text)] mono tracking-wider">{label}</span>
-              <input
-                className="bg-transparent border border-[var(--border)] px-3 py-1.5 text-sm mono outline-none placeholder:text-[var(--text)] focus:border-[var(--cyan)]"
-                placeholder={label}
-                value={(meta as any)[key]}
-                onChange={e => setMeta(p => ({ ...p, [key]: e.target.value }))}
-              />
+            <div className="flex gap-2 justify-end pt-2 border-t border-[var(--border)]">
+              <button className="btn btn-ghost px-4 py-2 text-xs" onClick={handleClear}>CLEAR</button>
+              <button className="btn btn-ghost px-4 py-2 text-xs" onClick={() => setEditing(false)}>CANCEL</button>
+              <button className="btn btn-cyan px-6 py-2 text-xs font-black tracking-widest" onClick={handleSave}>SAVE</button>
             </div>
-          ))}
+          </div>
         </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-[var(--text)] mono tracking-wider">Location</span>
-          <input
-            className="bg-transparent border border-[var(--border)] px-3 py-1.5 text-sm mono outline-none placeholder:text-[var(--text)] focus:border-[var(--cyan)]"
-            placeholder="Location"
-            value={meta.location}
-            onChange={e => setMeta(p => ({ ...p, location: e.target.value }))}
-          />
-        </div>
-
-        <div className="flex gap-2 justify-end">
-          <button className="btn btn-ghost px-4 py-1.5 text-xs" onClick={handleClear}>CLEAR</button>
-          <button className="btn btn-ghost px-4 py-1.5 text-xs" onClick={() => setEditing(false)}>CANCEL</button>
-          <button className="btn btn-cyan px-4 py-1.5 text-xs font-black" onClick={handleSave}>SAVE</button>
-        </div>
-      </div>
+      </>
     );
   }
 

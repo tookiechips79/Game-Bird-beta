@@ -127,7 +127,13 @@ function matchBets(queueA: Bet[], queueB: Bet[]): { bookedBets: BookedBet[]; upd
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [game, setGame] = useState<GameState>(loadGame);
-  const [isAdmin, setIsAdminState] = useState(() => localStorage.getItem('gb_admin') === '1');
+  const [isAdminFlag, setIsAdminState] = useState(() => localStorage.getItem('gb_admin') === '1');
+  const { currentUser } = useUser();
+
+  // isAdmin is true when the flag is set (password was entered) OR current user is an admin account
+  // Non-admin users cannot gain admin — if a non-admin is logged in, flag is ignored
+  const isAdmin = isAdminFlag && (currentUser === null || currentUser.isAdmin === true);
+
   const setIsAdmin = (v: boolean) => {
     setIsAdminState(v);
     if (v) localStorage.setItem('gb_admin', '1');
@@ -135,7 +141,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
   const [gameHistory, setGameHistory] = useState<GameRecord[]>(loadHistory);
   const [clockOffset, setClockOffset] = useState(0);
-  const { getUserById, deductCredits, clearPendingBetsForGame, refundBet } = useUser();
+  const { getUserById, deductCredits, clearPendingBetsForGame, refundBet, recordGameSnapshot } = useUser();
 
   const gameRef = useRef(game);
   useEffect(() => { gameRef.current = game; }, [game]);
@@ -340,7 +346,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!bet.booked) payouts.push({ userId: bet.userId, amount: bet.amount });
     }
 
+    // Snapshot before/after — only matched bet participants
+    const snapshotPlayers = g.bookedBets.flatMap(bb => [
+      { userId: bb.userIdA, name: bb.userNameA, betAmount: bb.amount },
+      { userId: bb.userIdB, name: bb.userNameB, betAmount: bb.amount },
+    ]).map(p => {
+      const u = getUserById(p.userId);
+      return { userId: p.userId, name: p.name, before: (u?.credits ?? 0) + p.betAmount, after: 0 };
+    });
+
     clearPendingBetsForGame(g.currentGameNumber, payouts);
+
+    // Fill in after-settlement credits and record snapshot
+    const afterPlayers = snapshotPlayers.map(p => {
+      const u = getUserById(p.userId);
+      return { ...p, after: u?.credits ?? 0 };
+    });
+    recordGameSnapshot({
+      id: `snap_${Date.now()}`,
+      gameNumber: g.currentGameNumber,
+      timestamp: Date.now(),
+      winningTeam,
+      totalBefore: afterPlayers.reduce((s, p) => s + p.before, 0),
+      totalAfter: afterPlayers.reduce((s, p) => s + p.after, 0),
+      players: afterPlayers,
+    });
 
     // Refund unmatched next-game bets individually (by betId, not gameNumber)
     // so matched next-game bets carried forward are not incorrectly cleared
@@ -408,7 +438,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       nextTotalBookedAmount: 0,
       lastWinner: winningTeam,
     }));
-  }, [getUserById, clearPendingBetsForGame, refundBet]);
+  }, [getUserById, clearPendingBetsForGame, refundBet, recordGameSnapshot]);
 
   const clearHistory = useCallback(() => {
     setGameHistory([]);

@@ -32,24 +32,29 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // Skip non-GET requests and cross-origin requests
+  if (request.method !== 'GET' || !url.origin.startsWith(self.location.origin.split(':').slice(0,2).join(':'))) {
+    return;
+  }
+
   // For HTML - always fetch from network (never cache)
   if (url.pathname === '/' || url.pathname === '/index.html') {
     event.respondWith(
-      fetch(request).catch(() => {
+      fetch(request.clone()).catch(() => {
         console.log('Offline - no cached HTML');
         return new Response('Offline');
       })
     );
     return;
   }
-  
+
   // For assets - try cache first, fallback to network
   event.respondWith(
-    caches.match(request)
+    caches.match(request.clone())
       .then((response) => {
-        return response || fetch(request);
+        return response || fetch(request.clone());
       })
-      .catch(() => fetch(request))
+      .catch(() => fetch(request.clone()))
   );
 });
 

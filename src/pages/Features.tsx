@@ -50,14 +50,15 @@ export default function Features() {
           <div className="hud-panel bracket overflow-hidden mb-3">
             <div className="px-4 py-3 border-b border-[var(--border)]">
               <p className="text-sm" style={{ color: 'var(--text)', lineHeight: 1.6 }}>
-                Game Bird is a real-time betting platform where users can place bets on live billiards games and win sweep coins.
+                Game Bird is a real-time betting platform where users can place bets on live billiards games, challenge each other head-to-head through the Postbox escrow system, and win sweep coins — all without posting cash or trusting handshakes.
               </p>
             </div>
-            <div className="grid grid-cols-3 divide-x divide-[var(--border)]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[var(--border)]">
               {[
                 { icon: '◈', label: 'Real-time Scoreboard', desc: 'Live scores, stats, and game status', color: 'var(--cyan)' },
                 { icon: '⊕', label: 'Live Betting', desc: 'Bet on current and upcoming games', color: 'var(--gold)' },
                 { icon: '◉', label: 'Real Coins', desc: 'Win coins cashable to your wallet', color: 'var(--green)' },
+                { icon: '⚖', label: 'Postbox', desc: 'Head-to-head escrow challenges with a neutral judge', color: 'var(--gold)' },
               ].map(item => (
                 <div key={item.label} className="px-4 py-5 flex flex-col items-center gap-2 text-center">
                   <span style={{ color: item.color, textShadow: `0 0 4px ${item.color}`, fontSize: '1.5rem' }}>{item.icon}</span>
@@ -94,6 +95,19 @@ export default function Features() {
           <div className="grid grid-cols-1 gap-3">
             {[
               {
+                title: 'POSTBOX — Escrow Challenge System',
+                icon: '⚖',
+                color: 'var(--gold)',
+                items: [
+                  'Two players can place a head-to-head bet on any game — in the pool hall or across the internet',
+                  'Coins lock into escrow the moment both sides accept, so nobody has to post cash or trust a handshake',
+                  'A neutral judge receives a unique link and records the outcome with one tap — no arguing, no chasing',
+                  'Winnings are credited instantly and automatically the moment the judge records the final verdict',
+                  'Full win/loss record and history tracked per player',
+                  'Works anywhere — in person, cross-city, or online',
+                ],
+              },
+              {
                 title: 'Real-time Scoreboard',
                 icon: '◈',
                 color: 'var(--cyan)',
@@ -105,14 +119,18 @@ export default function Features() {
                 ],
               },
               {
-                title: 'Betting System',
+                title: 'Betting Queue',
                 icon: '⊕',
                 color: 'var(--gold)',
                 items: [
-                  'Multiple bet denominations (10, 50, 100 Sweep Coins)',
-                  'Current game and next game betting queues',
-                  'Automatic bet matching and booking',
-                  'Real-time bet status updates',
+                  'Place bets on the current game or lock in your position for the next game before it starts',
+                  'Choose your denomination — 10, 50, or 100 Sweep Coins per bet',
+                  'Bets are matched automatically against opposing side wagers in real time',
+                  'Once matched, your bet is booked and locked — no cancellations, no disputes',
+                  'Separate queues for current and next game keep the action organized and always moving',
+                  'Unmatched bets are held in queue and auto-booked the moment a matching bet comes in',
+                  'All booked bets are visible to every player for full transparency',
+                  'Winnings are calculated and credited instantly when the game result is submitted by admins or agents',
                 ],
               },
               {
@@ -123,6 +141,18 @@ export default function Features() {
                   'Complete bet receipts for every transaction',
                   'Immutable bet ledger ensuring full transparency',
                   'Complete game and transaction history for record keeping',
+                ],
+              },
+              {
+                title: 'P2P Coin Transfer',
+                icon: '⇄',
+                color: 'var(--green)',
+                items: [
+                  'Send coins directly to any player by username',
+                  'Instant transfer — no fees, no delays',
+                  'Both sender and recipient get a full transaction record',
+                  'Every transfer is logged for transparency',
+                  'Access from your wallet under the P2P TRANSFER tab',
                 ],
               },
               {

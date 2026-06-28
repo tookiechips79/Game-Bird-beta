@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
+import { useGame } from '@/contexts/GameContext';
 
 type Tab = 'login' | 'signup';
 
@@ -47,8 +48,24 @@ function PinPad({ value, onChange }: { value: string; onChange: (v: string) => v
 
 export default function Login() {
   const { users, addUser, setCurrentUser, setPin } = useUser();
+  const { setIsAdmin } = useGame();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('login');
+  const [showAdminPrompt, setShowAdminPrompt] = useState(false);
+  const [adminPw, setAdminPw] = useState('');
+  const [adminPwError, setAdminPwError] = useState(false);
+  const adminInputRef = useRef<HTMLInputElement>(null);
+
+  const submitAdminPw = () => {
+    if (adminPw === '1980') {
+      setIsAdmin(true);
+      navigate('/admin');
+    } else {
+      setAdminPwError(true);
+      setAdminPw('');
+      setTimeout(() => adminInputRef.current?.focus(), 50);
+    }
+  };
 
   // Login state
   const [loginName, setLoginName] = useState('');
@@ -89,7 +106,7 @@ export default function Login() {
     if (signupPin !== signupPin2) { setSignupError('PINs do not match.'); setSignupPin2(''); return; }
     const user = addUser(name, false, 0, signupPin, signupReferral);
     setCurrentUser(user);
-    navigate('/arena');
+    navigate('/');
   };
 
   return (
@@ -255,6 +272,17 @@ export default function Login() {
           )}
         </div>
 
+        {/* Admin entry */}
+        <div className="flex justify-center mt-4">
+          <button
+            className="mono text-xs"
+            style={{ color: 'rgba(255,255,255,0.2)', background: 'none', border: 'none', cursor: 'pointer' }}
+            onClick={() => { setAdminPw(''); setAdminPwError(false); setShowAdminPrompt(true); setTimeout(() => adminInputRef.current?.focus(), 50); }}
+          >
+            ⚙ admin
+          </button>
+        </div>
+
         {/* Footer links */}
         <div className="flex justify-center gap-4 mt-5 text-xs mono" style={{ color: 'var(--text-dim)' }}>
           <Link to="/terms" style={{ color: 'var(--text-dim)', textDecoration: 'none' }} className="hover:text-[var(--cyan)] transition-colors">Terms</Link>
@@ -263,6 +291,30 @@ export default function Login() {
         </div>
 
       </div>
+
+      {/* Admin password modal */}
+      {showAdminPrompt && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setShowAdminPrompt(false)}>
+          <div className="flex flex-col gap-4 p-6 w-72" style={{ background: '#0a0a18', border: '1px solid rgba(255,215,0,0.4)', borderRadius: 4 }} onClick={e => e.stopPropagation()}>
+            <span className="mono text-sm font-black tracking-[0.25em]" style={{ color: 'var(--gold)' }}>ADMIN ACCESS</span>
+            <input
+              ref={adminInputRef}
+              type="password"
+              value={adminPw}
+              onChange={e => { setAdminPw(e.target.value); setAdminPwError(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') submitAdminPw(); if (e.key === 'Escape') setShowAdminPrompt(false); }}
+              placeholder="Enter password"
+              className="bg-transparent border px-3 py-2 mono text-sm outline-none w-full"
+              style={{ borderColor: adminPwError ? 'var(--red)' : 'rgba(255,215,0,0.3)', color: 'var(--text)' }}
+            />
+            {adminPwError && <span className="mono text-xs" style={{ color: 'var(--red)', marginTop: -8 }}>Incorrect password</span>}
+            <div className="flex gap-2">
+              <button className="btn btn-ghost flex-1 py-2 text-xs" onClick={() => setShowAdminPrompt(false)}>CANCEL</button>
+              <button className="btn btn-gold flex-1 py-2 text-xs font-black" onClick={submitAdminPw}>ENTER</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

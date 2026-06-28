@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
 import { useGame } from '@/contexts/GameContext';
@@ -11,16 +11,24 @@ import GameDescription from '@/components/game/GameDescription';
 import GameHistory from '@/components/history/GameHistory';
 import BetLedger from '@/components/history/BetLedger';
 import UserManager from '@/components/admin/UserManager';
+import CoinAuditLog from '@/components/admin/CoinAuditLog';
 
 export default function Arena() {
   const { game, declareWinner, isAdmin, setIsAdmin, resetQueues, updateGame } = useGame();
-  const { users, currentUser } = useUser();
+  const { users, currentUser, coinAuditLog } = useUser();
 
-  if (!currentUser) return <Navigate to="/login" replace />;
+  if (!currentUser && !isAdmin) return <Navigate to="/login" replace />;
   const totalAllCoins = users.filter(u => !u.isAdmin).reduce((s, u) => s + u.credits, 0);
   const [winFlash, setWinFlash] = useState<'A' | 'B' | null>(null);
   const [showUserManager, setShowUserManager] = useState(false);
+  const [showAuditLog, setShowAuditLog] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const unackedAlerts = coinAuditLog.filter(e => !e.acknowledged).length;
+  const [headerH, setHeaderH] = useState(53);
+  useEffect(() => {
+    const h = document.querySelector('header');
+    if (h) setHeaderH(h.getBoundingClientRect().height);
+  }, []);
 
   const handleWin = (team: 'A' | 'B') => {
     setWinFlash(team);
@@ -29,7 +37,11 @@ export default function Arena() {
   };
 
   return (
-    <div className="flex flex-col" style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
+    <div className="flex flex-col" style={{ minHeight: '100dvh', position: 'relative' }}>
+      {/* GB diamond pattern background */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/arena-bg.png)', backgroundSize: '30%', backgroundPosition: 'center' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(4,4,14,0.72)' }} />
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <Header />
 
       {/* Win flash overlay */}
@@ -43,7 +55,7 @@ export default function Arena() {
 
       {/* Admin dropdown bar */}
       {isAdmin && (
-        <div style={{ background: 'rgba(10,10,20,0.98)', borderBottom: '1px solid rgba(255,215,0,0.2)', position: 'sticky', top: 49, zIndex: 90 }}>
+        <div id="admin-bar" style={{ background: 'rgba(10,10,20,0.98)', borderBottom: '1px solid rgba(255,215,0,0.2)', position: 'fixed', top: headerH, left: 0, right: 0, zIndex: 90 }}>
           {/* Toggle row */}
           <button
             className="w-full flex items-center justify-between px-4 py-2 hover:bg-black transition-colors"
@@ -102,6 +114,13 @@ export default function Arena() {
                   <button className="btn btn-cyan px-4 py-2 text-xs font-black tracking-widest" onClick={() => { setShowUserManager(true); setAdminOpen(false); }}>
                     ★ MANAGE USERS
                   </button>
+                  <button
+                    className="btn px-4 py-2 text-xs font-black tracking-widest"
+                    style={{ color: unackedAlerts > 0 ? 'var(--red)' : 'var(--text-dim)', border: `1px solid ${unackedAlerts > 0 ? 'var(--red)' : 'rgba(255,255,255,0.15)'}`, background: unackedAlerts > 0 ? 'rgba(255,0,64,0.08)' : 'transparent' }}
+                    onClick={() => { setShowAuditLog(true); setAdminOpen(false); }}
+                  >
+                    {unackedAlerts > 0 ? `⚠ AUDIT (${unackedAlerts})` : 'AUDIT LOG'}
+                  </button>
                   <Link to="/whitebook" className="btn btn-ghost px-4 py-2 text-xs font-black tracking-widest" style={{ textDecoration: 'none' }}>
                     WHITEBOOK
                   </Link>
@@ -134,18 +153,20 @@ export default function Arena() {
         </div>
       )}
 
-      <main className="flex-1 w-full max-w-2xl mx-auto px-3 py-4 flex flex-col gap-3">
+      <main className="flex-1 w-full max-w-2xl mx-auto px-3 flex flex-col gap-3" style={{ paddingTop: isAdmin ? (adminOpen ? headerH + 160 : headerH + 48) : 16 }}>
         <CoinsInAction />
-        <GameDescription />
+        <GameDescription hideAdminControls />
         <WalletWidget />
         <PlayerBank />
-        <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} />
+        <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} hideAdminControls />
         <BettingQueue />
         <GameHistory />
         <BetLedger />
       </main>
 
       {showUserManager && <UserManager onClose={() => setShowUserManager(false)} />}
+      {showAuditLog && <CoinAuditLog onClose={() => setShowAuditLog(false)} />}
+      </div>
     </div>
   );
 }

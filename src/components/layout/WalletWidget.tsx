@@ -118,33 +118,51 @@ function CoinsInAction() {
 
 export { CoinsInAction };
 
-type WalletTab = 'receipts' | 'bets' | 'transactions' | 'membership' | 'getcoins';
+type WalletTab = 'receipts' | 'bets' | 'transactions' | 'membership' | 'getcoins' | 'p2p' | 'challenges';
 
 const typeColor: Record<string, string> = {
   bet_placed: 'var(--cyan)', bet_refund: 'var(--gold)', bet_win: 'var(--green)',
   bet_loss: 'var(--red)', tip_given: 'var(--red)', tip_received: 'var(--green)',
   admin_add: 'var(--green)', admin_deduct: 'var(--red)', cashout: 'var(--gold)',
   membership_activate: 'var(--cyan)', membership_renew: 'var(--cyan)', membership_cancel: 'var(--text)',
+  transfer_sent: 'var(--red)', transfer_received: 'var(--green)',
+  challenge_escrow: 'var(--red)', challenge_win: 'var(--green)', challenge_refund: 'var(--cyan)',
 };
 const typeLabel: Record<string, string> = {
   bet_placed: 'BET', bet_refund: 'REFUND', bet_win: 'WIN', bet_loss: 'LOSS',
   tip_given: 'TIP OUT', tip_received: 'TIP IN', admin_add: 'RELOAD', admin_deduct: 'DEDUCT',
   cashout: 'CASHOUT', membership_activate: 'MEMBER', membership_renew: 'RENEWED', membership_cancel: 'CANCELLED',
+  transfer_sent: 'SENT', transfer_received: 'RECEIVED',
+  challenge_escrow: 'ESCROW', challenge_win: 'WIN', challenge_refund: 'REFUND',
 };
 const txSign: Record<string, string> = {
   bet_placed: '−', bet_loss: '−', tip_given: '−', admin_deduct: '−', cashout: '−',
   bet_refund: '+', bet_win: '+', tip_received: '+', admin_add: '+', membership_activate: '−', membership_renew: '−',
+  transfer_sent: '−', transfer_received: '+',
+  challenge_escrow: '−', challenge_win: '+', challenge_refund: '+',
 };
 
 export default function WalletWidget() {
-  const { currentUser, addCredits, updateMembership, setCurrentUser } = useUser();
-  const { game, gameHistory } = useGame();
+  const { currentUser, addCredits, updateMembership, setCurrentUser, transferCredits, users, challenges, createChallenge, acceptChallenge, cancelChallenge } = useUser();
+  const { game, gameHistory, isAdmin } = useGame();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [walletTab, setWalletTab] = useState<WalletTab>('receipts');
   const [cashoutAmt, setCashoutAmt] = useState('');
   const [cashoutMsg, setCashoutMsg] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [p2pTo, setP2pTo] = useState('');
+  const [p2pAmt, setP2pAmt] = useState('');
+  const [p2pMsg, setP2pMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [chOpponent, setChOpponent] = useState('');
+  const [chMyPlayer, setChMyPlayer] = useState('');
+  const [chTheirPlayer, setChTheirPlayer] = useState('');
+  const [chAmt, setChAmt] = useState('');
+  const [chPhone, setChPhone] = useState('');
+  const [chMsg, setChMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [chBusy, setChBusy] = useState(false);
+  const [chJudgeLink, setChJudgeLink] = useState('');
+  const [chCopied, setChCopied] = useState(false);
 
   if (!currentUser) {
     return (
@@ -194,7 +212,7 @@ export default function WalletWidget() {
 
   // Membership
   const mem = currentUser.membership;
-  const isPremium = mem?.tier === 'premium' && !mem.cancelledAt;
+  const isPremium = isAdmin || (mem?.tier === 'premium' && !mem.cancelledAt);
   const isCancelled = mem?.tier === 'premium' && !!mem.cancelledAt;
 
   const handleCashout = () => {
@@ -217,6 +235,8 @@ export default function WalletWidget() {
     { id: 'bets', label: 'BETS', count: mySettledBets.length },
     { id: 'transactions', label: 'TXN', count: txList.length },
     { id: 'membership', label: 'MEMBERSHIP' },
+    { id: 'p2p', label: 'P2P TRANSFER' },
+    { id: 'challenges', label: 'CHALLENGES', count: challenges.filter(c => (c.opponentId === currentUser?.id && c.status === 'pending')).length || undefined },
   ];
 
   return (
@@ -284,7 +304,7 @@ export default function WalletWidget() {
       {open && (
         <div className="border-t border-[var(--border)]">
           {/* Tab bar */}
-          <div className="flex border-b border-[var(--border)]" style={{ background: 'rgba(0,0,0,0.3)' }}>
+          <div className="flex border-b border-[var(--border)] overflow-x-auto" style={{ background: 'rgba(0,0,0,0.3)', scrollbarWidth: 'none' }}>
             {tabs.map(t => (
               <button
                 key={t.id}
@@ -422,7 +442,10 @@ export default function WalletWidget() {
                     <div key={`${tx.id}-${i}`} className="grid grid-cols-4 px-4 py-2 items-center hover:bg-black">
                       <div className="text-xs mono font-black" style={{ color: typeColor[tx.type] ?? 'var(--text)' }}>{typeLabel[tx.type] ?? tx.type}</div>
                       <div className="text-xs" style={{ color: 'var(--text)' }}>{tx.description}</div>
-                      <div className="text-xs mono font-black" style={{ color: typeColor[tx.type] ?? 'var(--text)' }}>{txSign[tx.type] ?? ''}{tx.amount}</div>
+                      <div className="text-xs mono font-black" style={{ color: typeColor[tx.type] ?? 'var(--text)' }}>
+                        {txSign[tx.type] ?? ''}{tx.amount}
+                        {tx.type === 'challenge_win' && <span style={{ opacity: 0.7 }}> (+{tx.amount / 2})</span>}
+                      </div>
                       <div className="text-xs mono text-[var(--text)]">
                         {new Date(tx.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
                         {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -503,6 +526,395 @@ export default function WalletWidget() {
                   <button className="btn btn-ghost px-4 py-1.5 text-xs font-black" onClick={() => setConfirmCancel(false)}>KEEP IT</button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── CHALLENGES ── */}
+          {walletTab === 'challenges' && (() => {
+            const uid = currentUser.id;
+            const myChallenges = challenges.filter(c => c.creatorId === uid || c.opponentId === uid);
+            const incoming = myChallenges.filter(c => c.opponentId === uid && c.status === 'pending');
+            const outgoing = myChallenges.filter(c => c.creatorId === uid && c.status === 'pending');
+            const active = myChallenges.filter(c => c.status === 'accepted');
+            const history = myChallenges.filter(c => c.status === 'judged' || c.status === 'cancelled');
+            const judged = myChallenges.filter(c => c.status === 'judged');
+            const chWins = judged.filter(c => c.winnerId === uid).length;
+            const chLosses = judged.filter(c => c.winnerId && c.winnerId !== uid).length;
+            const chTotal = chWins + chLosses;
+            const chWinPct = chTotal > 0 ? Math.round((chWins / chTotal) * 100) : null;
+
+            const statusColor = (s: string) =>
+              s === 'accepted' ? 'var(--gold)' : s === 'judged' ? 'var(--green)' : s === 'cancelled' ? 'var(--text)' : 'var(--cyan)';
+
+            return (
+              <div className="flex flex-col gap-4 p-4 max-h-[480px] overflow-y-auto">
+
+                {/* W/L ratio */}
+                <div>
+                  <div className="text-xs mono tracking-widest mb-2" style={{ color: 'var(--cyan)' }}>CHALLENGE RECORD</div>
+                  <div className="flex items-center overflow-hidden" style={{ border: '1px solid rgba(0,229,255,0.2)', background: 'rgba(0,0,0,0.4)' }}>
+                    <div className="flex flex-col items-center px-4 py-3 flex-1" style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="mono text-xl font-black" style={{ color: 'var(--green)' }}>{chWins}</span>
+                      <span className="mono tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>WINS</span>
+                    </div>
+                    <div className="flex flex-col items-center px-4 py-3 flex-1" style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="mono text-xl font-black" style={{ color: 'var(--red)' }}>{chLosses}</span>
+                      <span className="mono tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>LOSSES</span>
+                    </div>
+                    <div className="flex flex-col items-center px-4 py-3 flex-1" style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="mono text-xl font-black" style={{ color: 'rgba(255,255,255,0.7)' }}>{chTotal}</span>
+                      <span className="mono tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>PLAYED</span>
+                    </div>
+                    <div className="flex flex-col items-center px-4 py-3 flex-1">
+                      <span className="mono text-xl font-black" style={{ color: chWinPct !== null && chWinPct >= 50 ? 'var(--green)' : chWinPct !== null ? 'var(--red)' : 'rgba(255,255,255,0.4)' }}>
+                        {chWinPct !== null ? `${chWinPct}%` : '—'}
+                      </span>
+                      <span className="mono tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>WIN RATE</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* New challenge form */}
+                <div className="flex flex-col gap-3">
+                  <div className="text-xs mono tracking-widest" style={{ color: 'var(--cyan)' }}>NEW CHALLENGE</div>
+                  <input
+                    className="bg-transparent border px-3 py-2 mono text-sm outline-none"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="Opponent username..."
+                    value={chOpponent}
+                    onChange={e => { setChOpponent(e.target.value); setChMsg(null); }}
+                    list="ch-users"
+                  />
+                  <datalist id="ch-users">
+                    {users.filter(u => u.id !== currentUser.id).map(u => <option key={u.id} value={u.name} />)}
+                  </datalist>
+                  <div className="flex flex-col gap-1">
+                    <div className="text-xs mono tracking-widest" style={{ color: 'var(--text)', opacity: 0.6 }}>PLAYERS IN ACTION</div>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 bg-transparent border px-3 py-2 mono text-sm outline-none"
+                        style={{ borderColor: 'var(--cyan)', color: 'var(--text)' }}
+                        placeholder="My player..."
+                        value={chMyPlayer}
+                        onChange={e => { setChMyPlayer(e.target.value); setChMsg(null); }}
+                      />
+                      <input
+                        className="flex-1 bg-transparent border px-3 py-2 mono text-sm outline-none"
+                        style={{ borderColor: 'var(--red)', color: 'var(--text)' }}
+                        placeholder="Their player..."
+                        value={chTheirPlayer}
+                        onChange={e => { setChTheirPlayer(e.target.value); setChMsg(null); }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="number" min={1}
+                      className="flex-1 bg-transparent border px-3 py-2 mono text-sm outline-none"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                      placeholder="Amount each..."
+                      value={chAmt}
+                      onChange={e => { setChAmt(e.target.value); setChMsg(null); }}
+                    />
+                    <input
+                      type="tel"
+                      className="flex-1 bg-transparent border px-3 py-2 mono text-sm outline-none"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                      placeholder="Judge phone #..."
+                      value={chPhone}
+                      onChange={e => { setChPhone(e.target.value); setChMsg(null); }}
+                    />
+                  </div>
+                  <button
+                    className="btn btn-cyan w-full py-2 text-xs font-black tracking-widest"
+                    disabled={chBusy}
+                    onClick={async () => {
+                      setChBusy(true); setChMsg(null);
+                      const result = await createChallenge(chOpponent, parseInt(chAmt), chPhone, chMyPlayer, chTheirPlayer);
+                      setChBusy(false);
+                      if (result.success) {
+                        setChMsg({ text: `✓ Challenge sent to ${chOpponent}! Waiting for them to accept.`, ok: true });
+                        setChOpponent(''); setChAmt(''); setChPhone(''); setChMyPlayer(''); setChTheirPlayer('');
+                      } else {
+                        setChMsg({ text: result.error ?? 'Failed.', ok: false });
+                      }
+                    }}
+                  >
+                    {chBusy ? 'SENDING...' : 'SEND CHALLENGE'}
+                  </button>
+                  {chMsg && <div className="mono text-xs text-center" style={{ color: chMsg.ok ? 'var(--green)' : 'var(--red)' }}>{chMsg.text}</div>}
+                </div>
+
+                {/* Incoming challenges */}
+                {incoming.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="text-xs mono tracking-widest" style={{ color: 'var(--gold)' }}>INCOMING ({incoming.length})</div>
+                    {incoming.map(c => (
+                      <div key={c.id} className="flex flex-col gap-2 p-3" style={{ border: '1px solid rgba(255,215,0,0.3)', background: 'rgba(255,215,0,0.04)' }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs font-black" style={{ color: 'var(--gold)' }}>{c.creatorName} is challenging you</span>
+                            {(c.myPlayer || c.theirPlayer) && (
+                              <div className="flex items-center gap-1 text-xs mono font-black">
+                                <span style={{ color: 'var(--cyan)' }}>{c.myPlayer}</span>
+                                <span style={{ color: 'var(--text)' }}>vs</span>
+                                <span style={{ color: 'var(--red)' }}>{c.theirPlayer}</span>
+                              </div>
+                            )}
+                            <span className="text-xs" style={{ color: 'var(--text)' }}>
+                              {c.myPlayer && <>They're betting on <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{c.myPlayer}</span> · </>}
+                              {c.amount} coins each · pot: <span style={{ color: 'var(--gold)' }}>{c.amount * 2}</span>
+                            </span>
+                            <span className="mono text-xs" style={{ color: 'var(--text)', opacity: 0.5, fontSize: '0.6rem' }}>
+                              {new Date(c.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button
+                              className="btn btn-ghost px-2 py-1 text-xs"
+                              onClick={async () => {
+                                setChBusy(true);
+                                const result = await cancelChallenge(c.id);
+                                setChBusy(false);
+                                if (!result.success) setChMsg({ text: result.error ?? 'Failed.', ok: false });
+                              }}
+                            >DECLINE</button>
+                            <button
+                              className="btn btn-gold px-2 py-1 text-xs font-black"
+                              disabled={chBusy}
+                              onClick={async () => {
+                                setChBusy(true);
+                                const result = await acceptChallenge(c.id);
+                                setChBusy(false);
+                                if (result.success) {
+                                  if (result.judgeLink) setChJudgeLink(result.judgeLink);
+                                  setChMsg({ text: `✓ Accepted! Judge has been notified.`, ok: true });
+                                } else {
+                                  setChMsg({ text: result.error ?? 'Failed.', ok: false });
+                                }
+                              }}
+                            >ACCEPT</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Active / awaiting judge */}
+                {active.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="text-xs mono tracking-widest" style={{ color: 'var(--gold)' }}>AWAITING JUDGE</div>
+                    {active.map(c => (
+                      <div key={c.id} className="p-3 flex flex-col gap-2" style={{ border: '1px solid rgba(255,215,0,0.2)', background: 'rgba(0,0,0,0.3)' }}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1 text-xs mono font-black">
+                              <span style={{ color: 'var(--cyan)' }}>{c.myPlayer}</span>
+                              <span style={{ color: 'var(--text)' }}>vs</span>
+                              <span style={{ color: 'var(--red)' }}>{c.theirPlayer}</span>
+                            </div>
+                            <span className="text-xs" style={{ color: 'var(--text)' }}>
+                              {c.creatorName} on <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{c.myPlayer}</span> · {c.opponentName} on <span style={{ color: 'var(--red)', fontWeight: 700 }}>{c.theirPlayer}</span>
+                            </span>
+                            <span className="mono text-xs" style={{ color: 'var(--text)', opacity: 0.5, fontSize: '0.6rem' }}>
+                              Accepted {c.acceptedAt ? new Date(c.acceptedAt).toLocaleString() : ''}
+                            </span>
+                          </div>
+                          <span className="mono text-xs font-black flex-shrink-0" style={{ color: 'var(--gold)' }}>POT: {c.amount * 2}</span>
+                        </div>
+                        <div className="text-xs animate-pulse" style={{ color: 'var(--text)' }}>⏳ Waiting for judge decision...</div>
+                        {(() => {
+                          const link = c.judgeLink || chJudgeLink;
+                          if (!link) return null;
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <div className="text-xs mono tracking-widest" style={{ color: 'var(--text)' }}>JUDGE LINK</div>
+                              <div className="flex items-center gap-2 p-2" style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)' }}>
+                                <span className="text-xs break-all flex-1 mono" style={{ color: 'var(--cyan)' }}>{link}</span>
+                                <button
+                                  className="flex-shrink-0 px-2 py-1 text-xs font-black mono tracking-widest"
+                                  style={{
+                                    border: `1px solid ${chCopied ? 'var(--green)' : 'var(--cyan)'}`,
+                                    color: chCopied ? 'var(--green)' : 'var(--cyan)',
+                                    background: chCopied ? 'rgba(0,255,65,0.08)' : 'rgba(0,229,255,0.08)',
+                                    cursor: 'pointer', whiteSpace: 'nowrap',
+                                  }}
+                                  onClick={() => { navigator.clipboard.writeText(link); setChCopied(true); setTimeout(() => setChCopied(false), 2000); }}
+                                >
+                                  {chCopied ? '✓ COPIED' : 'COPY'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Outgoing pending */}
+                {outgoing.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="text-xs mono tracking-widest" style={{ color: 'var(--text)' }}>SENT — WAITING FOR ACCEPT</div>
+                    {outgoing.map(c => (
+                      <div key={c.id} className="flex items-start justify-between p-3 gap-2" style={{ border: '1px solid var(--border)' }}>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs font-black" style={{ color: 'var(--cyan)' }}>Challenge to {c.opponentName}</span>
+                          <div className="flex items-center gap-1 text-xs mono">
+                            <span style={{ color: 'var(--cyan)' }}>{c.myPlayer}</span>
+                            <span style={{ color: 'var(--text)' }}>vs</span>
+                            <span style={{ color: 'var(--red)' }}>{c.theirPlayer}</span>
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--text)' }}>
+                            You're on <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{c.myPlayer}</span> · {c.amount} coins each
+                          </span>
+                          <span className="mono text-xs" style={{ color: 'var(--text)', opacity: 0.5, fontSize: '0.6rem' }}>
+                            Sent {new Date(c.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <button
+                          className="btn btn-ghost px-2 py-1 text-xs flex-shrink-0"
+                          onClick={() => cancelChallenge(c.id)}
+                        >CANCEL</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* History */}
+                {history.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="text-xs mono tracking-widest" style={{ color: 'var(--text)' }}>HISTORY</div>
+                    {history.slice(0, 20).map(c => (
+                      <div key={c.id} className="p-3 flex flex-col gap-1" style={{ border: '1px solid var(--border)', opacity: 0.8 }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1 text-xs mono font-black">
+                              <span style={{ color: c.winnerName === c.myPlayer ? 'var(--green)' : 'var(--text)' }}>{c.myPlayer}</span>
+                              <span style={{ color: 'var(--text)' }}>vs</span>
+                              <span style={{ color: c.winnerName === c.theirPlayer ? 'var(--green)' : 'var(--text)' }}>{c.theirPlayer}</span>
+                            </div>
+                            <span className="text-xs" style={{ color: 'var(--text)' }}>
+                              {c.creatorName} vs {c.opponentName} · {c.amount} coins each
+                            </span>
+                            {c.winnerName && (
+                              <span className="text-xs font-black" style={{ color: 'var(--green)' }}>🏆 {c.winnerName} won</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className="mono text-xs font-black" style={{ color: statusColor(c.status) }}>{c.status.toUpperCase()}</span>
+                            <span className="mono text-xs" style={{ color: 'var(--text)', opacity: 0.5, fontSize: '0.6rem' }}>
+                              {new Date(c.judgedAt ?? c.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {myChallenges.length === 0 && (
+                  <div className="flex items-center justify-center h-16 text-xs mono text-[var(--text)] tracking-widest">
+                    NO CHALLENGES YET
+                  </div>
+                )}
+
+              </div>
+            );
+          })()}
+
+          {/* ── P2P TRANSFER ── */}
+          {walletTab === 'p2p' && (
+            <div className="p-4 flex flex-col gap-4">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-xs mono tracking-widest" style={{ color: 'var(--cyan)' }}>AVAILABLE</span>
+                <span className="mono font-black" style={{ color: 'var(--green)' }}>{currentUser.credits} coins</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs mono tracking-widest" style={{ color: 'var(--text)' }}>RECIPIENT USERNAME</label>
+                  <input
+                    className="bg-transparent border px-3 py-2 mono text-sm outline-none w-full"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="Enter player name..."
+                    value={p2pTo}
+                    onChange={e => { setP2pTo(e.target.value); setP2pMsg(null); }}
+                    list="p2p-users"
+                  />
+                  <datalist id="p2p-users">
+                    {users.filter(u => u.id !== currentUser.id).map(u => (
+                      <option key={u.id} value={u.name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs mono tracking-widest" style={{ color: 'var(--text)' }}>AMOUNT</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="bg-transparent border px-3 py-2 mono text-sm outline-none w-full"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="0"
+                    value={p2pAmt}
+                    onChange={e => { setP2pAmt(e.target.value); setP2pMsg(null); }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const amt = parseInt(p2pAmt);
+                        const result = transferCredits(currentUser.id, p2pTo, amt);
+                        if (result.success) { setP2pMsg({ text: `✓ ${amt} coins sent to ${p2pTo}.`, ok: true }); setP2pTo(''); setP2pAmt(''); }
+                        else setP2pMsg({ text: result.error ?? 'Transfer failed.', ok: false });
+                      }
+                    }}
+                  />
+                </div>
+                <button
+                  className="btn btn-cyan w-full py-2 text-xs font-black tracking-widest"
+                  onClick={() => {
+                    const amt = parseInt(p2pAmt);
+                    const result = transferCredits(currentUser.id, p2pTo, amt);
+                    if (result.success) { setP2pMsg({ text: `✓ ${amt} coins sent to ${p2pTo}.`, ok: true }); setP2pTo(''); setP2pAmt(''); }
+                    else setP2pMsg({ text: result.error ?? 'Transfer failed.', ok: false });
+                  }}
+                >
+                  SEND COINS
+                </button>
+                {p2pMsg && (
+                  <div className="mono text-xs text-center py-1" style={{ color: p2pMsg.ok ? 'var(--green)' : 'var(--red)' }}>
+                    {p2pMsg.text}
+                  </div>
+                )}
+              </div>
+              {/* Recent transfer transactions */}
+              {(() => {
+                const transfers = (currentUser.transactions ?? []).filter(t => t.type === 'transfer_sent' || t.type === 'transfer_received');
+                if (transfers.length === 0) return null;
+                return (
+                  <div className="flex flex-col gap-0 border-t border-[var(--border)] pt-3 mt-1">
+                    <div className="text-xs mono tracking-widest mb-2" style={{ color: 'var(--text)' }}>RECENT TRANSFERS</div>
+                    <div className="flex flex-col divide-y divide-[var(--border)] max-h-40 overflow-y-auto">
+                      {transfers.slice(0, 20).map(tx => (
+                        <div key={tx.id} className="flex items-center justify-between py-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs mono font-black" style={{ color: typeColor[tx.type] }}>
+                              {typeLabel[tx.type]}
+                            </span>
+                            <span className="text-xs" style={{ color: 'var(--text)', fontSize: '0.65rem' }}>{tx.description}</span>
+                          </div>
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="mono text-xs font-black" style={{ color: typeColor[tx.type] }}>
+                              {txSign[tx.type]}{tx.amount}
+                            </span>
+                            <span className="mono" style={{ color: 'var(--text)', fontSize: '0.6rem' }}>
+                              {new Date(tx.timestamp).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

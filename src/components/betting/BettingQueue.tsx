@@ -53,141 +53,137 @@ function BetRow({ bet, isMatched, pairColor, onDelete }: { bet: Bet; isMatched: 
   );
 }
 
-function QueueColumn({
-  label,
-  color,
-  bets,
-  bookedBets,
-  teamSide,
-  isNextGame,
-  currentUserId,
-  onPlaceBet,
-  onDeleteBet,
-}: {
-  label: string;
-  color: string;
-  bets: Bet[];
-  bookedBets: BookedBet[];
-  teamSide: 'A' | 'B';
-  isNextGame: boolean;
-  currentUserId: string | null;
+function BetButtons({ color, teamSide, isNextGame, onPlaceBet }: {
+  color: string; teamSide: 'A' | 'B'; isNextGame: boolean;
   onPlaceBet: (side: 'A' | 'B', amount: number, isNext: boolean) => void;
-  onDeleteBet: (bet: Bet) => void;
 }) {
   const [inputAmt, setInputAmt] = useState('');
+  const submit = () => {
+    const amt = parseInt(inputAmt);
+    if (amt > 0) { onPlaceBet(teamSide, amt, isNextGame); setInputAmt(''); }
+  };
+  return (
+    <div className="flex flex-col gap-1.5 p-2" style={{ width: 96 }}>
+      {[10, 50, 100].map(amt => (
+        <button key={amt}
+          className="flex items-center justify-center text-xs font-black mono transition-all active:scale-95"
+          style={{ width: 52, height: 52, borderRadius: '50%', background: `${color}18`, border: `2px solid ${color}`, color, boxShadow: `0 0 8px ${color}30`, alignSelf: 'center', margin: '0 auto' }}
+          onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; e.currentTarget.style.boxShadow = `0 0 16px ${color}`; }}
+          onMouseLeave={e => { e.currentTarget.style.background = `${color}18`; e.currentTarget.style.color = color; e.currentTarget.style.boxShadow = `0 0 8px ${color}30`; }}
+          onClick={() => onPlaceBet(teamSide, amt, isNextGame)}
+        >{amt}</button>
+      ))}
+      <input type="number" min="1" placeholder="Amt"
+        className="w-full bg-transparent px-1 py-1.5 text-xs mono outline-none text-center placeholder:text-[var(--text-dim)]"
+        style={{ border: `1px solid ${color}40`, color }}
+        value={inputAmt} onChange={e => setInputAmt(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+      <button className="w-full py-1.5 text-xs font-black tracking-widest mono transition-all active:scale-95"
+        style={{ background: color, color: '#000', border: 'none', boxShadow: `0 0 8px ${color}50` }}
+        onClick={submit}>BET</button>
+    </div>
+  );
+}
 
-  // Build pair color map: betId → shared color for that matched pair
+function BetList({ label, color, bets, bookedBets, currentUserId, onDeleteBet }: {
+  label: string; color: string; bets: Bet[]; bookedBets: BookedBet[];
+  currentUserId: string | null; onDeleteBet: (bet: Bet) => void;
+}) {
   const pairColorMap: Record<string, string> = {};
   bookedBets.forEach((bb, i) => {
     const c = PAIR_COLORS[i % PAIR_COLORS.length];
     pairColorMap[bb.betIdA] = c;
     pairColorMap[bb.betIdB] = c;
   });
-
   const bookedIds = new Set(Object.keys(pairColorMap));
   const total = bets.reduce((s, b) => s + b.amount, 0);
   const matchedTotal = bets.filter(b => bookedIds.has(b.id)).reduce((s, b) => s + b.amount, 0);
 
-  const submit = () => {
-    const amt = parseInt(inputAmt);
-    if (amt > 0) {
-      onPlaceBet(teamSide, amt, isNextGame);
-      setInputAmt('');
-    }
-  };
+  return (
+    <div className="flex flex-col flex-1 min-w-0 overflow-hidden" style={{ borderLeft: `1px solid ${color}20` }}>
+      <div className="px-2 py-1.5 flex flex-col items-center gap-0.5" style={{ borderBottom: `1px solid ${color}30`, background: `${color}08` }}>
+        <span className="font-black text-xs uppercase tracking-widest text-center" style={{ color }}>{label}</span>
+        <div className="flex gap-2 mono text-sm font-bold">
+          <span style={{ color: 'var(--green)' }}>{matchedTotal} ✓</span>
+          <span style={{ color: 'var(--text)' }}>{total} TTL</span>
+        </div>
+      </div>
+      <div className="overflow-y-auto flex-1">
+        {Array.from({ length: Math.max(8, bets.length) }).map((_, i) => {
+          const bet = bets[i];
+          return bet
+            ? <BetRow key={bet.id} bet={bet} isMatched={bookedIds.has(bet.id)}
+                pairColor={pairColorMap[bet.id]}
+                onDelete={!bookedIds.has(bet.id) && bet.userId === currentUserId ? () => onDeleteBet(bet) : undefined} />
+            : <div key={`empty-${i}`} className="py-1.5 border-b border-[var(--border)]" style={{ minHeight: 34 }} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Keep QueueColumn for compactInput (admin) mode
+function QueueColumn({ label, color, bets, bookedBets, teamSide, isNextGame, currentUserId, onPlaceBet, onDeleteBet }: {
+  label: string; color: string; bets: Bet[]; bookedBets: BookedBet[];
+  teamSide: 'A' | 'B'; isNextGame: boolean; currentUserId: string | null;
+  onPlaceBet: (side: 'A' | 'B', amount: number, isNext: boolean) => void;
+  onDeleteBet: (bet: Bet) => void;
+}) {
+  const [inputAmt, setInputAmt] = useState('');
+  const pairColorMap: Record<string, string> = {};
+  bookedBets.forEach((bb, i) => {
+    const c = PAIR_COLORS[i % PAIR_COLORS.length];
+    pairColorMap[bb.betIdA] = c; pairColorMap[bb.betIdB] = c;
+  });
+  const bookedIds = new Set(Object.keys(pairColorMap));
+  const total = bets.reduce((s, b) => s + b.amount, 0);
+  const matchedTotal = bets.filter(b => bookedIds.has(b.id)).reduce((s, b) => s + b.amount, 0);
+  const submit = () => { const amt = parseInt(inputAmt); if (amt > 0) { onPlaceBet(teamSide, amt, isNextGame); setInputAmt(''); } };
 
   return (
-    <div className="flex flex-col flex-1 min-w-0">
-      {/* Header */}
-      <div
-        className="px-3 py-2 flex flex-col items-center gap-0.5"
-        style={{ borderBottom: `1px solid ${color}30`, background: `${color}08` }}
-      >
-        <span className="font-black text-sm uppercase tracking-widest text-center" style={{ color }}>
-          {label}
-        </span>
+    <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="px-3 py-2 flex flex-col items-center gap-0.5" style={{ borderBottom: `1px solid ${color}30`, background: `${color}08` }}>
+        <span className="font-black text-sm uppercase tracking-widest text-center" style={{ color }}>{label}</span>
         <div className="flex gap-2 mono text-xs">
           <span style={{ color: 'var(--green)' }}>{matchedTotal} ✓</span>
           <span style={{ color: 'var(--text)' }}>{total} TTL</span>
         </div>
       </div>
-
-      {/* Bet list */}
-      <div className="flex-1 overflow-y-auto" style={{ maxHeight: 220 }}>
-        {bets.length === 0 ? (
-          <div className="flex items-center justify-center h-12 text-sm text-[var(--text)] tracking-wider">
-            NO BETS PLACED
-          </div>
-        ) : (
-          bets.map(bet => (
-            <BetRow
-              key={bet.id}
-              bet={bet}
-              isMatched={bookedIds.has(bet.id)}
-              pairColor={pairColorMap[bet.id]}
-              onDelete={!bookedIds.has(bet.id) && bet.userId === currentUserId ? () => onDeleteBet(bet) : undefined}
-            />
+      <div className="overflow-y-auto" style={{ maxHeight: 160 }}>
+        {bets.length === 0
+          ? <div className="flex items-center justify-center h-12 text-sm text-[var(--text)] tracking-wider">NO BETS PLACED</div>
+          : bets.map(bet => (
+            <BetRow key={bet.id} bet={bet} isMatched={bookedIds.has(bet.id)} pairColor={pairColorMap[bet.id]}
+              onDelete={!bookedIds.has(bet.id) && bet.userId === currentUserId ? () => onDeleteBet(bet) : undefined} />
           ))
-        )}
+        }
       </div>
-
-      {/* Bet input */}
-      <div className="flex flex-col gap-2 p-2 border-t" style={{ borderColor: `${color}30` }}>
-        {/* Quick bet buttons */}
-        <div className="flex gap-1.5">
+      <div className="p-2 border-t" style={{ borderColor: `${color}30` }}>
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           {[10, 50, 100].map(amt => (
-            <button
-              key={amt}
-              className="flex-1 py-2 text-sm font-black tracking-widest mono transition-all active:scale-95"
-              style={{
-                background: `${color}18`,
-                border: `1.5px solid ${color}`,
-                color,
-                boxShadow: `0 0 8px ${color}30`,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = color;
-                e.currentTarget.style.color = '#000';
-                e.currentTarget.style.boxShadow = `0 0 18px ${color}`;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = `${color}18`;
-                e.currentTarget.style.color = color;
-                e.currentTarget.style.boxShadow = `0 0 8px ${color}30`;
-              }}
+            <button key={amt} className="py-2 text-sm font-black tracking-widest mono transition-all active:scale-95"
+              style={{ background: `${color}18`, border: `1.5px solid ${color}`, color, boxShadow: `0 0 8px ${color}30` }}
+              onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; e.currentTarget.style.boxShadow = `0 0 18px ${color}`; }}
+              onMouseLeave={e => { e.currentTarget.style.background = `${color}18`; e.currentTarget.style.color = color; e.currentTarget.style.boxShadow = `0 0 8px ${color}30`; }}
               onClick={() => onPlaceBet(teamSide, amt, isNextGame)}
-            >
-              {amt}
-            </button>
+            >{amt}</button>
           ))}
-        </div>
-        {/* Custom amount */}
-        <div className="flex gap-1.5">
-          <input
-            type="number"
-            min="1"
-            placeholder="Custom..."
-            className="flex-1 bg-transparent px-3 py-2 text-xs mono outline-none placeholder:text-[var(--text)]"
-            style={{ border: `1px solid ${color}40`, color }}
-            value={inputAmt}
-            onChange={e => setInputAmt(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && submit()}
-          />
-          <button
-            className="px-4 py-2 text-xs font-black tracking-widest mono transition-all active:scale-95"
-            style={{ background: color, color: '#000', border: 'none', boxShadow: `0 0 10px ${color}50` }}
-            onClick={submit}
-          >
-            BET
-          </button>
+          <div className="col-start-1 col-span-3 flex gap-1.5">
+            <input type="number" min="1" placeholder="Custom"
+              className="bg-transparent px-2 py-1.5 text-xs mono outline-none placeholder:text-[var(--text)]"
+              style={{ border: `1px solid ${color}40`, color, width: 160 }}
+              value={inputAmt} onChange={e => setInputAmt(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+            <button className="px-3 py-1.5 text-xs font-black tracking-widest mono transition-all active:scale-95"
+              style={{ background: color, color: '#000', border: 'none', boxShadow: `0 0 10px ${color}50` }}
+              onClick={submit}>BET</button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default function BettingQueue() {
-  const { game, placeBet, cancelBet } = useGame();
+export default function BettingQueue({ compactInput }: { compactInput?: boolean } = {}) {
+  const { game, placeBet, cancelBet, isAdmin } = useGame();
   const { currentUser, refundBet } = useUser();
 
   const { teamAName, teamBName, teamAQueue, teamBQueue, bookedBets,
@@ -237,7 +233,7 @@ export default function BettingQueue() {
   const matchedCount = bookedBets.length;
 
   const membership = currentUser?.membership;
-  const isActiveMember = !!(membership && membership.tier === 'premium' && !membership.cancelledAt);
+  const isActiveMember = isAdmin || !!(membership && membership.tier === 'premium' && !membership.cancelledAt);
 
   return (
     <div className="flex flex-col gap-2" style={{ position: 'relative' }}>
@@ -294,17 +290,18 @@ export default function BettingQueue() {
             <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[var(--green)]" style={{ boxShadow: '0 0 6px var(--green)' }} />
-                <span className="text-xs mono tracking-widest text-[var(--text)]">CURRENT GAME</span>
+                <span className="text-xs mono tracking-widest text-[var(--text)]">CURRENT GAME QUEUE</span>
               </div>
               <div className="flex items-center gap-3 text-xs mono">
                 <span style={{ color: 'var(--green)' }}>{matchedCount} MATCHED</span>
                 <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{totalBookedAmount * 2} ITM</span>
               </div>
             </div>
-            <div className="flex" style={{ minHeight: 120 }}>
-              <QueueColumn label={teamAName} color="var(--cyan)" bets={teamAQueue} bookedBets={bookedBets} teamSide="A" isNextGame={false} currentUserId={currentUser?.id ?? null} onPlaceBet={handlePlaceBet} onDeleteBet={bet => handleDeleteBet(bet, false)} />
-              <div style={{ width: 1, background: 'var(--border)' }} />
-              <QueueColumn label={teamBName} color="var(--red)" bets={teamBQueue} bookedBets={bookedBets} teamSide="B" isNextGame={false} currentUserId={currentUser?.id ?? null} onPlaceBet={handlePlaceBet} onDeleteBet={bet => handleDeleteBet(bet, false)} />
+            <div className="flex" style={{ height: 320 }}>
+              <BetButtons color="var(--cyan)" teamSide="A" isNextGame={false} onPlaceBet={handlePlaceBet} />
+              <BetList label={teamAName} color="var(--cyan)" bets={teamAQueue} bookedBets={bookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, false)} />
+              <BetList label={teamBName} color="var(--red)" bets={teamBQueue} bookedBets={bookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, false)} />
+              <BetButtons color="var(--red)" teamSide="B" isNextGame={false} onPlaceBet={handlePlaceBet} />
             </div>
           </div>
 
@@ -321,10 +318,11 @@ export default function BettingQueue() {
                 <span className="text-xs mono" style={{ color: 'var(--gold)' }}>{nextTotalBookedAmount * 2} ITM</span>
               )}
             </div>
-            <div className="flex" style={{ minHeight: 80 }}>
-              <QueueColumn label={teamAName} color="var(--cyan)" bets={nextTeamAQueue} bookedBets={nextBookedBets} teamSide="A" isNextGame={true} currentUserId={currentUser?.id ?? null} onPlaceBet={handlePlaceBet} onDeleteBet={bet => handleDeleteBet(bet, true)} />
-              <div style={{ width: 1, background: 'var(--border)' }} />
-              <QueueColumn label={teamBName} color="var(--red)" bets={nextTeamBQueue} bookedBets={nextBookedBets} teamSide="B" isNextGame={true} currentUserId={currentUser?.id ?? null} onPlaceBet={handlePlaceBet} onDeleteBet={bet => handleDeleteBet(bet, true)} />
+            <div className="flex" style={{ height: 320 }}>
+              <BetButtons color="var(--cyan)" teamSide="A" isNextGame={true} onPlaceBet={handlePlaceBet} />
+              <BetList label={teamAName} color="var(--cyan)" bets={nextTeamAQueue} bookedBets={nextBookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, true)} />
+              <BetList label={teamBName} color="var(--red)" bets={nextTeamBQueue} bookedBets={nextBookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, true)} />
+              <BetButtons color="var(--red)" teamSide="B" isNextGame={true} onPlaceBet={handlePlaceBet} />
             </div>
           </div>
         </div>

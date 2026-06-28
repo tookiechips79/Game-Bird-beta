@@ -122,6 +122,9 @@ function HistoryCard({ record }: { record: GameRecord }) {
             <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{record.totalAmount * 2} ITM</span>
           )}
           <span style={{ color: 'var(--text)' }}>{fmt(record.duration)}</span>
+          <span style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
           <span style={{ color: winnerColor, textShadow: `0 0 3px ${winnerColor}`, fontWeight: 900 }}>
             {winnerName.toUpperCase()} ★
           </span>

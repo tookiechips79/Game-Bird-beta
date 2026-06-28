@@ -65,12 +65,12 @@ const benefits = [
 ];
 
 const platformFeatures = [
-  { icon: '◈', color: 'var(--cyan)', title: 'Live Scoreboard', desc: 'Real-time score tracking with game timer and match statistics.' },
-  { icon: '◉', color: 'var(--green)', title: 'User Management', desc: 'Easy user creation, switching, and account management.' },
-  { icon: '◈', color: 'var(--gold)', title: 'Transaction History', desc: 'Complete record of all bets, wins, and credit transactions.' },
-  { icon: '⊞', color: 'var(--cyan)', title: 'Multi-Device Sync', desc: 'Synchronized experience across all devices and browsers.' },
-  { icon: '★', color: 'var(--gold)', title: 'Admin Controls', desc: 'Comprehensive admin tools for managing games and users.' },
-  { icon: '✓', color: 'var(--green)', title: 'Bet Matching', desc: 'Automatic bet matching system with real-time updates.' },
+  { icon: '◈', color: 'var(--cyan)', title: 'Live Scoreboard', desc: 'Real-time score tracking with game timer, match statistics, and live sync across all devices.' },
+  { icon: '⊕', color: 'var(--gold)', title: 'Betting Queue', desc: 'Place bets on current or upcoming games. Bets are matched automatically and booked instantly — winnings credited the moment results are submitted by admins or agents.' },
+  { icon: '⚖', color: 'var(--gold)', title: 'Postbox — Escrow Challenges', desc: 'Challenge any player head-to-head, in the pool hall or online. Coins lock into escrow on both sides, a neutral judge records the outcome via a unique link, and the winner gets paid instantly — no posting cash, no chasing.' },
+  { icon: '⇄', color: 'var(--cyan)', title: 'P2P Coin Transfer', desc: 'Send coins directly to any player by username. Instant, fee-free transfers with a full transaction record on both sides.' },
+  { icon: '◈', color: 'var(--green)', title: 'Transaction History', desc: 'Complete record of all bets, wins, transfers, challenges, and credit transactions.' },
+  { icon: '★', color: 'var(--gold)', title: 'Admin Controls', desc: 'Comprehensive admin tools for managing games, users, and payouts in real time.' },
 ];
 
 export default function About() {

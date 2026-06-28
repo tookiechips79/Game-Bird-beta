@@ -123,8 +123,9 @@ function TipButton({ playerName, color, align }: { playerName: string; color: st
   );
 }
 
-export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
-  const { game, isAdmin, updateGame } = useGame();
+export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
+  const { game, isAdmin: isAdminCtx, updateGame } = useGame();
+  const isAdmin = isAdminCtx && !hideAdminControls;
   const { teamAName, teamBName, teamAGames, teamBGames, teamABalls, teamBBalls, teamAHasBreak, currentGameNumber, lastWinner } = game;
 
   const [editingA, setEditingA] = useState(false);
@@ -157,7 +158,6 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
         {/* ── TEAM A ── */}
         <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: '112px 1fr', minWidth: 0 }}>
           <div className="flex flex-col items-center gap-1">
-            {/* Name above avatar */}
             <div className="flex items-center gap-1">
               {teamAHasBreak && (
                 <span className="mono font-black text-xs flex items-center justify-center" style={{ width: 18, height: 18, border: '1.5px solid var(--gold)', color: 'var(--gold)', background: 'rgba(255,215,0,0.1)', flexShrink: 0 }}>B</span>
@@ -176,16 +176,34 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-2 min-w-0">
-            <div className="flex items-end gap-3">
-              <div className="flex flex-col items-center">
+            {stackedLayout && (
+              <div className="flex flex-col items-center mt-1">
                 <span className="mono text-5xl font-bold neon-cyan leading-none">{teamAGames}</span>
                 <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
               </div>
-              <div className="w-px h-10 self-center" style={{ background: 'var(--border)' }} />
-              <div className="flex flex-col items-center">
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 min-w-0 justify-center">
+            {!stackedLayout && (
+              <div className="flex items-end gap-3">
+                <div className="flex flex-col items-center">
+                  <span className="mono text-5xl font-bold neon-cyan leading-none">{teamAGames}</span>
+                  <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
+                </div>
+                <div className="w-px h-10 self-center" style={{ background: 'var(--border)' }} />
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-1">
+                    {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamABalls: teamABalls - 1 })}>−</button>}
+                    <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--cyan)' }}>{teamABalls}</span>
+                    {isAdmin && <button className="btn btn-cyan w-5 h-5 text-xs" onClick={() => updateGame({ teamABalls: teamABalls + 1 })}>+</button>}
+                  </div>
+                  <span className="text-xs text-[var(--text)] uppercase tracking-wider">balls</span>
+                </div>
+              </div>
+            )}
+            {stackedLayout && (
+              <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1">
                   {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamABalls: teamABalls - 1 })}>−</button>}
                   <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--cyan)' }}>{teamABalls}</span>
@@ -193,8 +211,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
                 </div>
                 <span className="text-xs text-[var(--text)] uppercase tracking-wider">balls</span>
               </div>
-            </div>
-
+            )}
             <TipButton playerName={teamAName} color="var(--cyan)" align="left" />
             {isAdmin && (
               <button className="btn btn-cyan w-full py-1.5 text-xs font-black tracking-widest" onClick={onTeamAWin}>✓ WIN</button>
@@ -209,9 +226,26 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
 
         {/* ── TEAM B ── */}
         <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: '1fr 112px', minWidth: 0 }}>
-          <div className="flex flex-col gap-2 min-w-0 items-end">
-            <div className="flex items-end gap-3">
-              <div className="flex flex-col items-center">
+          <div className="flex flex-col gap-2 min-w-0 items-end justify-center">
+            {!stackedLayout && (
+              <div className="flex items-end gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-1">
+                    {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamBBalls: teamBBalls - 1 })}>−</button>}
+                    <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)', textShadow: 'none' }}>{teamBBalls}</span>
+                    {isAdmin && <button className="btn btn-red w-5 h-5 text-xs" onClick={() => updateGame({ teamBBalls: teamBBalls + 1 })}>+</button>}
+                  </div>
+                  <span className="text-xs text-[var(--text)] uppercase tracking-wider">balls</span>
+                </div>
+                <div className="w-px h-10 self-center" style={{ background: 'var(--border)' }} />
+                <div className="flex flex-col items-center">
+                  <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)', textShadow: 'none' }}>{teamBGames}</span>
+                  <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
+                </div>
+              </div>
+            )}
+            {stackedLayout && (
+              <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1">
                   {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamBBalls: teamBBalls - 1 })}>−</button>}
                   <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)', textShadow: 'none' }}>{teamBBalls}</span>
@@ -219,13 +253,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
                 </div>
                 <span className="text-xs text-[var(--text)] uppercase tracking-wider">balls</span>
               </div>
-              <div className="w-px h-10 self-center" style={{ background: 'var(--border)' }} />
-              <div className="flex flex-col items-center">
-                <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)', textShadow: 'none' }}>{teamBGames}</span>
-                <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
-              </div>
-            </div>
-
+            )}
             <TipButton playerName={teamBName} color="var(--red)" align="right" />
             {isAdmin && (
               <button className="btn btn-red w-full py-1.5 text-xs font-black tracking-widest" onClick={onTeamBWin}>✓ WIN</button>
@@ -233,7 +261,6 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
           </div>
 
           <div className="flex flex-col items-center gap-1">
-            {/* Name above avatar */}
             <div className="flex items-center gap-1">
               {editingB && isAdmin ? (
                 <input autoFocus className="bg-transparent border-b text-xs font-bold uppercase tracking-widest outline-none text-center" style={{ borderColor: 'var(--red)', color: 'var(--red)' }} value={nameB} onChange={e => setNameB(e.target.value)} onBlur={commitB} onKeyDown={e => e.key === 'Enter' && commitB()} />
@@ -252,6 +279,12 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin }: Props) {
                 </div>
               )}
             </div>
+            {stackedLayout && (
+              <div className="flex flex-col items-center mt-1">
+                <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)' }}>{teamBGames}</span>
+                <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
+              </div>
+            )}
           </div>
         </div>
 

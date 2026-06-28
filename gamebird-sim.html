@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameBird V2 — Simulation</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 2rem; }
+    h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+    .badge { font-size: 12px; padding: 3px 10px; border-radius: 6px; background: #1e1e1e; color: #888; }
+    .badge.running { background: #1a2a1a; color: #4caf50; }
+    .badge.complete { background: #1a2a1a; color: #4caf50; }
+    .badge.error { background: #2a1a1a; color: #e05252; }
+    button { background: transparent; border: 0.5px solid #444; color: #e0e0e0; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    button:hover { background: #1e1e1e; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+    .stat-card { background: #1a1a1a; border-radius: 8px; padding: 1rem; }
+    .stat-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+    .stat-val { font-size: 22px; font-weight: 500; }
+    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+    .panel { background: #111; border: 0.5px solid #222; border-radius: 10px; padding: 1rem; }
+    .panel-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+    #balances { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+    .bal-row { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .bar-track { flex: 2; background: #222; border-radius: 4px; height: 6px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.2s; }
+    .bal-num { min-width: 44px; text-align: right; }
+    .bal-net { min-width: 40px; text-align: right; font-size: 11px; }
+    #feed { display: flex; flex-direction: column; gap: 4px; font-size: 12px; max-height: 180px; overflow-y: auto; color: #888; }
+    .chart-wrap { background: #111; border: 0.5px solid #222; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+    .chart-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 12px; color: #888; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-swatch { width: 10px; height: 3px; border-radius: 2px; }
+    .chart-canvas-wrap { position: relative; height: 180px; }
+    #results { display: none; margin-top: 1rem; }
+    .results-title { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+    #checks { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+    .check-row { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 6px; background: #1a1a1a; }
+    .check-ok { color: #4caf50; }
+    .check-fail { color: #e05252; }
+    @media (max-width: 600px) { .stats { grid-template-columns: repeat(2,1fr); } .panels { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <h1>GameBird V2 — Simulation</h1>
+    <div class="sub">5 users &middot; 100 games &middot; random bets</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span id="status-badge" class="badge">idle</span>
+    <button id="run-btn" onclick="runSim()">Run simulation</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="stat-label">Game</div><div class="stat-val" id="stat-game">—</div></div>
+  <div class="stat-card"><div class="stat-label">Bets matched</div><div class="stat-val" id="stat-matched">—</div></div>
+  <div class="stat-card"><div class="stat-label">Coins in play</div><div class="stat-val" id="stat-itm">—</div></div>
+  <div class="stat-card"><div class="stat-label">Drift</div><div class="stat-val" id="stat-drift">—</div></div>
+</div>
+
+<div class="panels">
+  <div class="panel">
+    <div class="panel-title">Player balances</div>
+    <div id="balances"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Live game feed</div>
+    <div id="feed"></div>
+  </div>
+</div>
+
+<div class="chart-wrap">
+  <div class="chart-title">Balance over time</div>
+  <div class="chart-legend" id="chart-legend"></div>
+  <div class="chart-canvas-wrap">
+    <canvas id="chart" role="img" aria-label="Line chart of player balances over 100 games">Player balance history over 100 games.</canvas>
+  </div>
+</div>
+
+<div id="results">
+  <div class="results-title">Final integrity check</div>
+  <div id="checks"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const NAMES = ['Alice','Bob','Carlos','Diana','Erik'];
+const COLORS = ['#378ADD','#639922','#BA7517','#A32D2D','#534AB7'];
+const BET_AMOUNTS = [10,20,50,100];
+const START = 1000;
+let chart = null, simRunning = false;
+
+const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+
+function matchBets(qA, qB){
+  const booked=[], usedA=new Set(), usedB=new Set();
+  for(const ba of qA){
+    if(usedA.has(ba.id)) continue;
+    const m=qB.find(bb=>!usedB.has(bb.id)&&bb.amount===ba.amount);
+    if(m){
+      usedA.add(ba.id); usedB.add(m.id); ba.booked=true; m.booked=true;
+      booked.push({userIdA:ba.userId,userIdB:m.userId,amount:ba.amount,betIdA:ba.id,betIdB:m.id,userNameA:ba.userName,userNameB:m.userName});
+    }
+  }
+  return booked;
+}
+
+function initBalances(){
+  document.getElementById('balances').innerHTML = NAMES.map((name,i)=>`
+    <div class="bal-row">
+      <span class="dot" style="background:${COLORS[i]}"></span>
+      <span style="flex:1;color:#aaa;">${name}</span>
+      <span style="color:#555;font-size:13px;">1,000 coins</span>
+    </div>`).join('');
+  document.getElementById('chart-legend').innerHTML = NAMES.map((name,i)=>`
+    <div class="legend-item"><span class="legend-swatch" style="background:${COLORS[i]}"></span>${name}</div>`).join('');
+}
+
+function renderBalances(users){
+  document.getElementById('balances').innerHTML = users.map((u,i)=>{
+    const net=u.credits-START;
+    const pct=Math.min(Math.round((u.credits/START)*100),200);
+    return `<div class="bal-row">
+      <span class="dot" style="background:${COLORS[i]}"></span>
+      <span style="flex:1;">${u.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct/2}%;background:${COLORS[i]};"></div></div>
+      <span class="bal-num">${u.credits}</span>
+      <span class="bal-net" style="color:${net>=0?'#4caf50':'#e05252'}">${net>=0?'+':''}${net}</span>
+    </div>`;
+  }).join('');
+}
+
+function setBadge(text, cls){
+  const b=document.getElementById('status-badge');
+  b.textContent=text;
+  b.className='badge'+(cls?' '+cls:'');
+}
+
+function runSim(){
+  if(simRunning) return;
+  simRunning=true;
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('results').style.display='none';
+  document.getElementById('feed').innerHTML='';
+
+  const users=NAMES.map((name,i)=>({id:`u${i}`,name,credits:START,pendingBets:[],history:[START],wins:0,losses:0,betsPlaced:0,betsMatched:0}));
+  const getUser=id=>users.find(u=>u.id===id);
+  let betId=0, totalMatched=0, totalITM=0;
+  const gameHistory=[], issues=[];
+
+  if(chart){ chart.destroy(); chart=null; }
+  chart=new Chart(document.getElementById('chart'),{
+    type:'line',
+    data:{
+      labels:['0'],
+      datasets:users.map((u,i)=>({label:u.name,data:[START],borderColor:COLORS[i],backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.2}))
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{maxTicksLimit:10,color:'#555',font:{size:11}},grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#555',font:{size:11}},grid:{color:'rgba(255,255,255,0.05)'},min:0}
+      }
+    }
+  });
+
+  setBadge('running…','running');
+
+  const feedEl=document.getElementById('feed');
+  function addFeed(html){
+    const row=document.createElement('div');
+    row.innerHTML=html;
+    feedEl.insertBefore(row,feedEl.firstChild);
+    if(feedEl.children.length>50) feedEl.removeChild(feedEl.lastChild);
+  }
+
+  let g=0;
+  function step(){
+    if(g>=100){ finalize(); return; }
+    g++;
+
+    const teamAQueue=[], teamBQueue=[];
+    for(const user of users){
+      if(Math.random()<0.70){
+        const amount=rand(BET_AMOUNTS);
+        if(user.credits<amount) continue;
+        const side=Math.random()<0.5?'A':'B';
+        const id=`b${++betId}`;
+        user.credits-=amount;
+        user.pendingBets.push({id,amount});
+        user.betsPlaced++;
+        const bet={id,userId:user.id,userName:user.name,amount,teamSide:side,booked:false};
+        if(side==='A') teamAQueue.push(bet); else teamBQueue.push(bet);
+      }
+    }
+
+    const bookedBets=matchBets(teamAQueue,teamBQueue);
+    const winner=Math.random()<0.5?'A':'B';
+    const allBets=[...teamAQueue,...teamBQueue];
+
+    const gameBetsA=teamAQueue.filter(b=>b.booked).map(b=>({userName:b.userName,amount:b.amount,won:winner==='A',booked:true}));
+    const gameBetsB=teamBQueue.filter(b=>b.booked).map(b=>({userName:b.userName,amount:b.amount,won:winner==='B',booked:true}));
+    const totalAmount=bookedBets.reduce((s,b)=>s+b.amount,0);
+    gameHistory.push({gameNumber:g,winningTeam:winner,bets:{teamA:gameBetsA,teamB:gameBetsB},totalAmount});
+
+    for(const bb of bookedBets){
+      const wId=winner==='A'?bb.userIdA:bb.userIdB;
+      const lId=winner==='A'?bb.userIdB:bb.userIdA;
+      getUser(wId).credits+=bb.amount*2;
+      getUser(wId).wins++;
+      getUser(lId).losses++;
+      getUser(wId).pendingBets=getUser(wId).pendingBets.filter(p=>p.id!==(winner==='A'?bb.betIdA:bb.betIdB));
+      getUser(lId).pendingBets=getUser(lId).pendingBets.filter(p=>p.id!==(winner==='A'?bb.betIdB:bb.betIdA));
+      getUser(wId).betsMatched++;
+      getUser(lId).betsMatched++;
+    }
+    for(const bet of allBets){
+      if(!bet.booked){ const u=getUser(bet.userId); u.credits+=bet.amount; u.pendingBets=u.pendingBets.filter(p=>p.id!==bet.id); }
+    }
+
+    users.forEach(u=>u.history.push(u.credits));
+    totalMatched+=bookedBets.length;
+    totalITM+=totalAmount*2;
+
+    const checkIssues=[];
+    if(gameBetsA.length!==bookedBets.length) checkIssues.push('A count mismatch');
+    if(gameBetsB.length!==bookedBets.length) checkIssues.push('B count mismatch');
+    for(const b of gameBetsA) if(b.won!==(winner==='A')) checkIssues.push('won flag wrong A');
+    for(const b of gameBetsB) if(b.won!==(winner==='B')) checkIssues.push('won flag wrong B');
+    if(checkIssues.length) issues.push({game:g,issues:checkIssues});
+
+    document.getElementById('stat-game').textContent=`${g}/100`;
+    document.getElementById('stat-matched').textContent=totalMatched*2;
+    document.getElementById('stat-itm').textContent=totalITM.toLocaleString();
+    const drift=users.reduce((s,u)=>s+u.credits,0)-START*users.length;
+    const dEl=document.getElementById('stat-drift');
+    dEl.textContent=drift===0?'0':(drift>0?'+':'')+drift;
+    dEl.style.color=drift===0?'#4caf50':'#e05252';
+
+    if(g%5===0||g<=5){
+      const col=winner==='A'?COLORS[0]:COLORS[3];
+      addFeed(`<span style="color:#444">#${g}</span> <span style="color:${col};font-weight:500;">Player ${winner} wins</span> <span style="color:#555">${bookedBets.length} pair${bookedBets.length!==1?'s':''} · ${totalAmount*2} ITM</span>`);
+    }
+
+    if(g%2===0){
+      chart.data.labels=users[0].history.map((_,i)=>i);
+      users.forEach((u,i)=>{ chart.data.datasets[i].data=[...u.history]; });
+      chart.update('none');
+      renderBalances(users);
+    }
+
+    setTimeout(step,30);
+  }
+
+  step();
+
+  function finalize(){
+    chart.data.labels=users[0].history.map((_,i)=>i);
+    users.forEach((u,i)=>{ chart.data.datasets[i].data=[...u.history]; });
+    chart.update('none');
+    renderBalances(users);
+
+    const finalTotal=users.reduce((s,u)=>s+u.credits,0);
+    const drift=finalTotal-START*users.length;
+    const allPendingClear=users.every(u=>u.pendingBets.length===0);
+    const seen=new Set(); let dup=false;
+    for(const r of gameHistory){ if(seen.has(r.gameNumber)){dup=true;break;} seen.add(r.gameNumber); }
+
+    const checks=[
+      {ok:gameHistory.length===100, label:`Game history: ${gameHistory.length}/100 games recorded, no gaps`},
+      {ok:issues.length===0, label:issues.length===0?'Bet ledger: all records pass integrity checks':`Bet ledger: ${issues.length} issue(s) found`},
+      {ok:drift===0, label:`Credit integrity: ${drift===0?'zero drift':'DRIFT '+drift}`},
+      {ok:allPendingClear, label:`Pending bets: ${allPendingClear?'all cleared after game 100':'some stuck!'}`},
+      {ok:!dup, label:`Duplicate game numbers: ${dup?'found!':'none'}`},
+    ];
+
+    const checksEl=document.getElementById('checks');
+    checksEl.innerHTML='';
+    for(const c of checks){
+      const row=document.createElement('div');
+      row.className='check-row';
+      row.innerHTML=`<i class="ti ${c.ok?'ti-circle-check':'ti-circle-x'}" style="color:${c.ok?'#4caf50':'#e05252'};font-size:16px;" aria-hidden="true"></i><span>${c.label}</span>`;
+      checksEl.appendChild(row);
+    }
+
+    document.getElementById('results').style.display='block';
+    setBadge('complete','complete');
+    document.getElementById('run-btn').disabled=false;
+    document.getElementById('run-btn').textContent='Run again';
+    simRunning=false;
+  }
+}
+
+initBalances();
+</script>
+</body>
+</html>

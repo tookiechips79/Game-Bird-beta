@@ -23,6 +23,9 @@ import Membership from '@/pages/Membership';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import Login from '@/pages/Login';
+import AdminArena from '@/pages/AdminArena';
+import JudgePage from '@/pages/JudgePage';
+import Postbox from '@/pages/Postbox';
 import './index.css';
 
 export default function App() {
@@ -35,6 +38,7 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/arena" element={<Arena />} />
+            <Route path="/admin" element={<AdminArena />} />
             <Route path="/whitebook" element={<Whitebook />} />
             <Route path="/features" element={<Features />} />
             <Route path="/about" element={<About />} />
@@ -44,6 +48,8 @@ export default function App() {
             <Route path="/membership" element={<Membership />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/judge/:token" element={<JudgePage />} />
+            <Route path="/postbox" element={<Postbox />} />
             <Route path="*" element={<Landing />} />
           </Routes>
         </GameProvider>

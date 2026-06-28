@@ -5,7 +5,7 @@ import { useUser } from '@/contexts/UserContext';
 
 type Mode = 'subscription' | 'reload';
 
-const RELOAD_AMOUNTS = [10, 20, 50, 100, 200];
+const RELOAD_AMOUNTS = [10, 20, 50, 100, 200, 500, 1000];
 
 function fmt(v: string, type: 'card' | 'expiry' | 'cvv') {
   if (type === 'card') return v.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').slice(0, 19);
@@ -116,21 +116,24 @@ export default function Membership() {
                 {mode === 'reload' && <span className="text-xs mono" style={{ color: 'var(--gold)' }}>✓ SELECTED</span>}
               </div>
               <div className="mono font-black" style={{ fontSize: '1.8rem', color: 'var(--gold)', lineHeight: 1 }}>${reloadAmt}<span className="text-sm font-normal text-[var(--text)]"> = {reloadAmt} coins</span></div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {RELOAD_AMOUNTS.slice(0, 3).map(a => (
+              <div className="grid grid-cols-4 gap-1.5">
+                {RELOAD_AMOUNTS.map(a => (
                   <button key={a} type="button" className="btn py-1 text-xs font-black"
                     style={{ border: `1px solid ${reloadAmt === a && mode === 'reload' ? 'var(--gold)' : 'var(--border)'}`, color: reloadAmt === a && mode === 'reload' ? 'var(--gold)' : 'var(--text)', background: reloadAmt === a && mode === 'reload' ? 'rgba(255,215,0,0.08)' : 'transparent' }}
                     onClick={e => { e.stopPropagation(); setReloadAmt(a); setMode('reload'); }}
                   >${a}</button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {RELOAD_AMOUNTS.slice(3).map(a => (
-                  <button key={a} type="button" className="btn py-1 text-xs font-black"
-                    style={{ border: `1px solid ${reloadAmt === a && mode === 'reload' ? 'var(--gold)' : 'var(--border)'}`, color: reloadAmt === a && mode === 'reload' ? 'var(--gold)' : 'var(--text)', background: reloadAmt === a && mode === 'reload' ? 'rgba(255,215,0,0.08)' : 'transparent' }}
-                    onClick={e => { e.stopPropagation(); setReloadAmt(a); setMode('reload'); }}
-                  >${a}</button>
-                ))}
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Custom amount..."
+                  className="flex-1 bg-transparent border border-[var(--border)] px-3 py-1.5 text-sm mono outline-none focus:border-[var(--gold)] placeholder:text-[var(--text-dim)]"
+                  style={{ color: 'var(--gold)' }}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => { const v = Number(e.target.value); if (v > 0) { setReloadAmt(v); setMode('reload'); } }}
+                />
               </div>
               <div className="text-xs text-center" style={{ color: 'var(--text)' }}>$1 = 1 coin</div>
             </div>

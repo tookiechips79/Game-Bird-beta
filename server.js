@@ -25,6 +25,16 @@ import {
   getBetReceipts,
   getArenaAllBetReceipts,
   clearUserBetReceipts,
+  addDriftEntry,
+  getDriftLog,
+  acknowledgeDrift,
+  clearDriftLog,
+  addAdminAuditEvent,
+  getAdminAuditLog,
+  clearAdminAuditLog,
+  addGameSnapshot,
+  getGameSnapshots,
+  clearGameSnapshots,
 } from './src/db/database.js';
 
 // Deployment version: 3
@@ -1797,6 +1807,191 @@ app.post('/api/bet-receipts/:userId/clear', async (req, res) => {
     console.error(`❌ [BET-RECEIPTS-CLEAR] Error clearing receipts:`, error);
     res.status(500).json({ error: 'Failed to clear bet receipts' });
   }
+});
+
+// ============================================================================
+// AUDIT API ENDPOINTS
+// ============================================================================
+
+// ── Coin Drift Log ──
+app.get('/api/audit/drift', async (req, res) => {
+  try { res.json(await getDriftLog()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/audit/drift', async (req, res) => {
+  try { await addDriftEntry(req.body); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/audit/drift/:id/ack', async (req, res) => {
+  try { await acknowledgeDrift(req.params.id); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/audit/drift', async (req, res) => {
+  try { await clearDriftLog(); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin Activity Log ──
+app.get('/api/audit/activity', async (req, res) => {
+  try { res.json(await getAdminAuditLog()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/audit/activity', async (req, res) => {
+  try { await addAdminAuditEvent(req.body); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/audit/activity', async (req, res) => {
+  try { await clearAdminAuditLog(); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Game Balance Snapshots ──
+app.get('/api/audit/snapshots', async (req, res) => {
+  try { res.json(await getGameSnapshots()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/audit/snapshots', async (req, res) => {
+  try { await addGameSnapshot(req.body); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/audit/snapshots', async (req, res) => {
+  try { await clearGameSnapshots(); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================================
+// 🤝 CHALLENGE (ESCROW BET) SYSTEM
+// ============================================================================
+// In-memory store; survives the session, clears on restart.
+// For persistence, these can be added to the DB later.
+const challenges = new Map(); // id -> Challenge
+
+function generateToken() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+
+// Twilio SMS helper — only fires if env vars are set
+async function sendJudgeText(phone, link, creatorName, opponentName, amount) {
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER } = process.env;
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+    console.log('📵 [CHALLENGE] Twilio not configured — skipping SMS. Link:', link);
+    return;
+  }
+  try {
+    const twilio = (await import('twilio')).default;
+    const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    await client.messages.create({
+      body: `Game Bird — You've been selected as judge for a ${amount}-coin bet between ${creatorName} and ${opponentName}. Tap here to declare the winner: ${link}`,
+      from: TWILIO_PHONE_NUMBER,
+      to: phone,
+    });
+    console.log(`✅ [CHALLENGE] Judge SMS sent to ${phone}`);
+  } catch (err) {
+    console.error('❌ [CHALLENGE] Twilio error:', err.message);
+  }
+}
+
+// POST /api/challenges — creator proposes a challenge
+app.post('/api/challenges', (req, res) => {
+  const { creatorId, creatorName, opponentId, opponentName, amount, judgePhone, myPlayer, theirPlayer } = req.body;
+  if (!creatorId || !opponentId || !amount || amount <= 0) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+  const id = generateToken();
+  const judgeToken = generateToken();
+  const challenge = {
+    id, creatorId, creatorName, opponentId, opponentName,
+    amount, judgePhone: judgePhone || '', judgeToken,
+    myPlayer: myPlayer || creatorName, theirPlayer: theirPlayer || opponentName,
+    status: 'pending', createdAt: Date.now(),
+  };
+  challenges.set(id, challenge);
+  console.log(`🤝 [CHALLENGE] Created: ${creatorName} vs ${opponentName} for ${amount} coins`);
+  res.json({ success: true, challenge });
+});
+
+// GET /api/challenges — list all challenges (client filters by userId)
+app.get('/api/challenges', (req, res) => {
+  res.json(Array.from(challenges.values()));
+});
+
+// POST /api/challenges/:id/accept — opponent accepts; triggers SMS to judge
+app.post('/api/challenges/:id/accept', async (req, res) => {
+  const challenge = challenges.get(req.params.id);
+  if (!challenge) return res.status(404).json({ error: 'Challenge not found.' });
+  if (challenge.status !== 'pending') return res.status(400).json({ error: 'Challenge is no longer pending.' });
+  challenge.status = 'accepted';
+  challenge.acceptedAt = Date.now();
+  const host = req.headers.origin || `https://${req.headers.host}`;
+  const judgeLink = `${host}/#/judge/${challenge.judgeToken}`;
+  challenge.judgeLink = judgeLink;
+  challenges.set(challenge.id, challenge);
+  // Send judge text
+  await sendJudgeText(challenge.judgePhone, judgeLink, challenge.myPlayer, challenge.theirPlayer, challenge.amount);
+  console.log(`✅ [CHALLENGE] Accepted: ${challenge.creatorName} vs ${challenge.opponentName}`);
+  res.json({ success: true, challenge, judgeLink });
+});
+
+// GET /api/challenges/:id/judgelink — return (or generate) judge link for an accepted challenge
+app.get('/api/challenges/:id/judgelink', (req, res) => {
+  const challenge = challenges.get(req.params.id);
+  if (!challenge) return res.status(404).json({ error: 'Challenge not found.' });
+  if (challenge.status !== 'accepted') return res.status(400).json({ error: 'Challenge is not active.' });
+  if (!challenge.judgeToken) return res.status(400).json({ error: 'No judge token.' });
+  const host = req.headers.origin || `https://${req.headers.host}`;
+  const judgeLink = `${host}/#/judge/${challenge.judgeToken}`;
+  challenge.judgeLink = judgeLink;
+  challenges.set(challenge.id, challenge);
+  res.json({ success: true, judgeLink });
+});
+
+// POST /api/challenges/:id/cancel — cancel a pending challenge (refund escrow client-side)
+app.post('/api/challenges/:id/cancel', (req, res) => {
+  const challenge = challenges.get(req.params.id);
+  if (!challenge) return res.status(404).json({ error: 'Challenge not found.' });
+  if (challenge.status === 'judged') return res.status(400).json({ error: 'Already judged.' });
+  challenge.status = 'cancelled';
+  challenges.set(challenge.id, challenge);
+  res.json({ success: true, challenge });
+});
+
+// GET /api/judge/:token — judge opens link; returns challenge details
+app.get('/api/judge/:token', (req, res) => {
+  const challenge = Array.from(challenges.values()).find(c => c.judgeToken === req.params.token);
+  if (!challenge) return res.status(404).json({ error: 'Invalid or expired judge link.' });
+  if (challenge.status === 'judged') return res.json({ challenge, alreadyJudged: true });
+  if (challenge.status !== 'accepted') return res.status(400).json({ error: 'This challenge is not ready to be judged yet.' });
+  res.json({ challenge, alreadyJudged: false });
+});
+
+// POST /api/judge/:token/decide — judge picks winner
+app.post('/api/judge/:token/decide', (req, res) => {
+  const { winnerId } = req.body;
+  const challenge = Array.from(challenges.values()).find(c => c.judgeToken === req.params.token);
+  if (!challenge) return res.status(404).json({ error: 'Invalid or expired judge link.' });
+  if (challenge.status === 'judged') return res.status(400).json({ error: 'Already judged.' });
+  if (challenge.status !== 'accepted') return res.status(400).json({ error: 'Challenge not accepted yet.' });
+  if (winnerId !== challenge.creatorId && winnerId !== challenge.opponentId) {
+    return res.status(400).json({ error: 'Invalid winner.' });
+  }
+  const loserId = winnerId === challenge.creatorId ? challenge.opponentId : challenge.creatorId;
+  const winnerName = winnerId === challenge.creatorId ? (challenge.myPlayer || challenge.creatorName) : (challenge.theirPlayer || challenge.opponentName);
+  challenge.status = 'judged';
+  challenge.winnerId = winnerId;
+  challenge.winnerName = winnerName;
+  challenge.judgedAt = Date.now();
+  challenges.set(challenge.id, challenge);
+  // Emit payout event so connected clients can update their state
+  io.emit('challenge:decided', { challengeId: challenge.id, winnerId, loserId, winnerName, amount: challenge.amount });
+  console.log(`🏆 [CHALLENGE] ${winnerName} wins ${challenge.amount * 2} coins!`);
+  res.json({ success: true, challenge });
 });
 
 // Start server - listen on 0.0.0.0 for external connections (required for Render deployment)
