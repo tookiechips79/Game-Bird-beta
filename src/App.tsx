@@ -26,6 +26,7 @@ import Login from '@/pages/Login';
 import AdminArena from '@/pages/AdminArena';
 import JudgePage from '@/pages/JudgePage';
 import Postbox from '@/pages/Postbox';
+import Disclaimer from '@/pages/Disclaimer';
 import './index.css';
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/judge/:token" element={<JudgePage />} />
             <Route path="/postbox" element={<Postbox />} />
+            <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="*" element={<Landing />} />
           </Routes>
         </GameProvider>
