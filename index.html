@@ -7,13 +7,12 @@
     <meta name="description" content="Real-time betting app for Game Bird matches" />
     <meta name="author" content="Game Bird" />
     <meta property="og:image" content="/og-image.png" />
-    
+
     <!-- CRITICAL: Prevent caching of this HTML file -->
-    <!-- Safari and browsers should always fetch fresh HTML -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#00FFFF" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,15 +20,15 @@
     <meta name="apple-mobile-web-app-title" content="Game Bird" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="screen-orientation" content="landscape" />
-    
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    
+
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-    
+
     <!-- Basic styling -->
     <style>
       html, body {
@@ -52,7 +51,7 @@
   </head>
 
   <body>
-    <!-- Safari PWA pull-down trap — absorbs swipe-down gesture at top of screen -->
+    <!-- Safari PWA pull-down trap -->
     <div style="position:fixed;top:0;left:0;right:0;height:24px;z-index:99999;background:transparent;" ontouchstart="event.preventDefault()" ontouchmove="event.preventDefault()"></div>
     <div id="root" style="width: 100%; height: 100%; background: black;"></div>
 
@@ -62,27 +61,17 @@
       <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;">Rotate Your Device</div>
       <div style="font-size: 1rem; color: #888; margin-top: 4px;">GameBird is optimized for landscape</div>
     </div>
-    
-    <!-- Fallback if React fails to render -->
+
     <script>
-      // Log when app starts
       console.log('🚀 Game Bird App Loading...');
-      
-      // Global error handler to catch any issues
-      window.addEventListener('error', (event) => {
-        console.error('❌ Global Error:', event.error);
-      });
-      
-      window.addEventListener('unhandledrejection', (event) => {
-        console.error('❌ Unhandled Rejection:', event.reason);
-      });
+      window.addEventListener('error', (event) => { console.error('❌ Global Error:', event.error); });
+      window.addEventListener('unhandledrejection', (event) => { console.error('❌ Unhandled Rejection:', event.reason); });
     </script>
-    
+
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- PWA Service Worker Registration -->
+
     <script>
       // Lock to landscape + go fullscreen to hide browser chrome
       function enterFullscreenLandscape() {
@@ -93,51 +82,33 @@
           screen.orientation.lock('landscape').catch(() => {});
         }
       }
-      // Trigger on first user interaction (browsers require a gesture for fullscreen)
       document.addEventListener('click', enterFullscreenLandscape, { once: true });
       document.addEventListener('touchstart', enterFullscreenLandscape, { once: true });
 
-      // Keep page scrolled at least 1px so Safari never triggers pull-to-reveal
-      function preventPullToReveal() {
-        if (window.scrollY === 0) window.scrollTo(0, 1);
-      }
-      document.addEventListener('touchstart', preventPullToReveal, { passive: true });
-      window.addEventListener('scroll', function() {
+      // Keep scroll at 1px to prevent pull-to-reveal
+      document.addEventListener('touchstart', function() {
         if (window.scrollY === 0) window.scrollTo(0, 1);
       }, { passive: true });
-      
+
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Aggressive Service Worker management for cache busting
           navigator.serviceWorker.getRegistrations().then((registrations) => {
-            // Unregister all old Service Workers
             for (let reg of registrations) {
               console.log('🧹 Unregistering old SW:', reg.scope);
               reg.unregister();
             }
-            
-            // Register fresh Service Worker with cache busting
             navigator.serviceWorker.register('/sw.js?v=' + Date.now())
               .then((registration) => {
                 console.log('✅ SW registered (fresh):', registration.scope);
-                // Check for updates every 5 seconds
-                setInterval(() => {
-                  registration.update();
-                }, 5000);
+                setInterval(() => { registration.update(); }, 5000);
               })
-              .catch((registrationError) => {
-                console.error('❌ SW registration failed:', registrationError);
-              });
+              .catch((err) => { console.error('❌ SW registration failed:', err); });
           });
         });
-        
-        // Also check for SW updates on page visibility change
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
             navigator.serviceWorker.getRegistrations().then((registrations) => {
-              for (let reg of registrations) {
-                reg.update();
-              }
+              for (let reg of registrations) reg.update();
             });
           }
         });
