@@ -97,7 +97,7 @@ export default function Login() {
       setPin(user.id, loginPin);
     }
     setCurrentUser(user);
-    navigate('/arena');
+    navigate('/');
   };
 
   const handleSignup = () => {
