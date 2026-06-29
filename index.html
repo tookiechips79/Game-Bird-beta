@@ -97,19 +97,14 @@
       document.addEventListener('click', enterFullscreenLandscape, { once: true });
       document.addEventListener('touchstart', enterFullscreenLandscape, { once: true });
 
-      // Block pull-to-reveal browser chrome on Safari PWA
-      let lastY = 0;
-      document.addEventListener('touchstart', function(e) {
-        lastY = e.touches[0].clientY;
+      // Keep page scrolled at least 1px so Safari never triggers pull-to-reveal
+      function preventPullToReveal() {
+        if (window.scrollY === 0) window.scrollTo(0, 1);
+      }
+      document.addEventListener('touchstart', preventPullToReveal, { passive: true });
+      window.addEventListener('scroll', function() {
+        if (window.scrollY === 0) window.scrollTo(0, 1);
       }, { passive: true });
-      document.addEventListener('touchmove', function(e) {
-        const scrollTop = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
-        const dy = e.touches[0].clientY - lastY;
-        // Block pull-down only when already at the top
-        if (dy > 0 && scrollTop === 0) {
-          e.preventDefault();
-        }
-      }, { passive: false });
       
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
