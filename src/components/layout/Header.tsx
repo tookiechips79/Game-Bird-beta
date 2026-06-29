@@ -17,7 +17,8 @@ const NAV_LINKS = [
 
 export default function Header() {
   const { isAdmin, setIsAdmin } = useGame();
-  const { users } = useUser();
+  const { users, currentUser, challenges } = useUser();
+  const pendingChallenges = challenges.filter(c => c.opponentId === currentUser?.id && c.status === 'pending').length;
   const loc = useLocation();
   const navigate = useNavigate();
   const totalCoins = users.filter(u => !u.isAdmin).reduce((s, u) => s + u.credits, 0);
@@ -69,9 +70,13 @@ export default function Header() {
                 color: loc.pathname === to ? '#000' : '#fff',
                 borderBottom: loc.pathname === to ? '1px solid #000' : '1px solid transparent',
                 textDecoration: 'none',
+                position: 'relative',
               }}
             >
               {label}
+              {to === '/postbox' && pendingChallenges > 0 && (
+                <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 6px var(--gold)' }} />
+              )}
             </Link>
           ))}
         </nav>
@@ -166,9 +171,13 @@ export default function Header() {
                   color: loc.pathname === to ? '#000' : '#fff',
                   textDecoration: 'none',
                   background: loc.pathname === to ? 'rgba(0,0,0,0.1)' : 'transparent',
+                  position: 'relative',
                 }}
               >
                 {label}
+                {to === '/postbox' && pendingChallenges > 0 && (
+                  <span style={{ position: 'absolute', top: 12, right: 'calc(50% - 52px)', width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 6px var(--gold)' }} />
+                )}
               </Link>
             ))}
           </div>
