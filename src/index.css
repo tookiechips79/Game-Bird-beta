@@ -26,6 +26,7 @@ html {
   margin: 0; padding: 0;
   background: var(--bg);
   height: 100%;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -35,7 +36,7 @@ body {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 20px;
   min-height: 100%;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
