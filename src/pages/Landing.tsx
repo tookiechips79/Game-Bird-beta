@@ -137,6 +137,7 @@ export default function Landing() {
                     [true, 'Track game progress'],
                     [false, 'Place bets (requires sub)'],
                     [false, 'Watch betting queues'],
+                    [false, 'Postbox challenges'],
                   ].map(([ok, label]) => (
                     <div key={label as string} className="flex items-center gap-2 text-xs">
                       <span style={{ color: ok ? 'var(--green)' : 'var(--red)', flexShrink: 0 }}>{ok ? '✓' : '✗'}</span>
@@ -160,7 +161,7 @@ export default function Landing() {
                   <span className="mono text-xs px-1.5 py-0.5 font-black" style={{ border: '1px solid var(--gold)', color: 'var(--gold)' }}>HOT</span>
                 </div>
                 <div className="px-4 py-3 flex flex-col gap-2">
-                  {['Everything in Free', 'Place unlimited bets', 'Win real coins', 'Cash out winnings'].map(label => (
+                  {['Everything in Free', 'Place unlimited bets', 'Win real coins', 'Cash out winnings', 'Postbox challenges'].map(label => (
                     <div key={label} className="flex items-center gap-2 text-xs">
                       <span style={{ color: 'var(--green)', flexShrink: 0 }}>✓</span>
                       <span style={{ color: 'var(--text)' }}>{label}</span>

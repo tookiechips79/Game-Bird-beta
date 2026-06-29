@@ -40,6 +40,33 @@ export default function Postbox() {
   const { isAdmin } = useGame();
   const navigate = useNavigate();
 
+  const membership = currentUser?.membership;
+  const isActiveMember = isAdmin || !!(membership && membership.tier === 'premium' && !membership.cancelledAt);
+
+  if (currentUser && !isActiveMember) {
+    return (
+      <div className="flex flex-col" style={{ minHeight: '100dvh', position: 'relative' }}>
+        <div style={{ position: 'fixed', inset: 0, background: '#04040f', zIndex: 0 }} />
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+          <Header />
+          <main className="flex-1 flex flex-col items-center justify-center px-4 gap-6 text-center">
+            <span style={{ fontSize: '3rem', color: 'var(--gold)' }}>★</span>
+            <h2 className="text-2xl font-black uppercase tracking-widest" style={{ color: 'var(--gold)' }}>Premium Feature</h2>
+            <p className="text-sm text-[var(--text)] max-w-xs leading-relaxed">
+              Postbox challenges are available to <span style={{ color: 'var(--gold)', fontWeight: 700 }}>Premium members</span> only. Upgrade your membership to send and receive challenges.
+            </p>
+            <button className="btn btn-gold px-6 py-3 text-sm font-black tracking-widest" onClick={() => navigate('/membership')}>
+              UPGRADE TO PREMIUM
+            </button>
+            <button className="btn btn-ghost px-4 py-2 text-xs" onClick={() => navigate('/arena')}>
+              BACK TO ARENA
+            </button>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   const [chOpponent, setChOpponent] = useState('');
   const [chMyPlayer, setChMyPlayer] = useState('');
   const [chTheirPlayer, setChTheirPlayer] = useState('');
