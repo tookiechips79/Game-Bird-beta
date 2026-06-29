@@ -35,7 +35,7 @@ interface UserContextType {
   adminAuditLog: AdminAuditEvent[];
   clearAdminAudit: () => void;
   challenges: Challenge[];
-  createChallenge: (opponentUsername: string, amount: number, judgePhone: string, myPlayer: string, theirPlayer: string) => Promise<{ success: boolean; error?: string; judgeLink?: string }>;
+  createChallenge: (opponentUsername: string, amount: number, judgePhone: string, myPlayer: string, theirPlayer: string, betType?: 'game' | 'match') => Promise<{ success: boolean; error?: string; judgeLink?: string }>;
   acceptChallenge: (challengeId: string) => Promise<{ success: boolean; error?: string; judgeLink?: string }>;
   cancelChallenge: (challengeId: string) => Promise<{ success: boolean; error?: string }>;
   payoutChallenge: (challengeId: string, winnerId: string, winnerName: string) => void;
@@ -184,7 +184,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const createChallenge = async (opponentUsername: string, amount: number, judgePhone: string, myPlayer: string, theirPlayer: string): Promise<{ success: boolean; error?: string; judgeLink?: string }> => {
+  const createChallenge = async (opponentUsername: string, amount: number, judgePhone: string, myPlayer: string, theirPlayer: string, betType: 'game' | 'match' = 'game'): Promise<{ success: boolean; error?: string; judgeLink?: string }> => {
     const current = usersRef.current.find(u => u.id === currentUserId);
     if (!current) return { success: false, error: 'No player selected.' };
     const opponent = usersRef.current.find(u => u.name.toLowerCase() === opponentUsername.toLowerCase().trim());
@@ -200,7 +200,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const r = await fetch(`${SERVER_URL}/api/challenges`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creatorId: current.id, creatorName: current.name, opponentId: opponent.id, opponentName: opponent.name, amount, judgePhone, myPlayer: myPlayer.trim() || current.name, theirPlayer: theirPlayer.trim() || opponent.name }),
+        body: JSON.stringify({ creatorId: current.id, creatorName: current.name, opponentId: opponent.id, opponentName: opponent.name, amount, judgePhone, myPlayer: myPlayer.trim() || current.name, theirPlayer: theirPlayer.trim() || opponent.name, betType }),
       });
       const data = await r.json();
       if (!data.success) throw new Error(data.error);

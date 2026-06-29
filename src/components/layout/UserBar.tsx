@@ -45,7 +45,7 @@ export default function UserBar() {
         style={{ cursor: (!currentUser || isAdmin) ? 'pointer' : 'default' }}
       >
         <span className="w-2 h-2 rounded-full" style={{ background: currentUser ? 'var(--green)' : 'var(--text)' }} />
-        <span>{currentUser ? currentUser.name : isAdmin ? 'ADMIN' : 'SIGN IN'}</span>
+        <span className="truncate max-w-[80px]">{currentUser ? currentUser.name : isAdmin ? 'ADMIN' : 'SIGN IN'}</span>
         {currentUser && (
           <span className="mono" style={{ color: 'var(--gold)' }}>{currentUser.credits}</span>
         )}

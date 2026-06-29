@@ -40,7 +40,7 @@ export default function Arena() {
     <div className="flex flex-col" style={{ minHeight: '100dvh', position: 'relative' }}>
       {/* GB diamond pattern background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/arena-bg.png)', backgroundSize: '30%', backgroundPosition: 'center' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(4,4,14,0.72)' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(4,4,14,0.88)' }} />
       <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <Header />
 

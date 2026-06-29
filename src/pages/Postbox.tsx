@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import { useUser } from '@/contexts/UserContext';
@@ -46,6 +47,7 @@ export default function Postbox() {
   const [chPhone, setChPhone] = useState('');
   const [chMsg, setChMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [chBusy, setChBusy] = useState(false);
+  const [chBetType, setChBetType] = useState<'game' | 'match'>('game');
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
   const [localLinks, setLocalLinks] = useState<Record<string, string>>({});
 
@@ -74,11 +76,11 @@ export default function Postbox() {
 
   const sendChallenge = async () => {
     setChBusy(true); setChMsg(null);
-    const result = await createChallenge(chOpponent, parseInt(chAmt), chPhone, chMyPlayer, chTheirPlayer);
+    const result = await createChallenge(chOpponent, parseInt(chAmt), chPhone, chMyPlayer, chTheirPlayer, chBetType);
     setChBusy(false);
     if (result.success) {
       setChMsg({ text: `✓ Challenge sent to ${chOpponent}! Waiting for them to accept.`, ok: true });
-      setChOpponent(''); setChAmt(''); setChPhone(''); setChMyPlayer(''); setChTheirPlayer('');
+      setChOpponent(''); setChAmt(''); setChPhone(''); setChMyPlayer(''); setChTheirPlayer(''); setChBetType('game');
     } else {
       setChMsg({ text: result.error ?? 'Failed.', ok: false });
     }
@@ -112,16 +114,16 @@ export default function Postbox() {
             </div>
             <div className="flex flex-col divide-y divide-[var(--border)]">
               {[
-                { step: '01', label: 'SEND A CHALLENGE', desc: 'Enter your opponent\'s username, the two players in the match, and how many coins each of you are putting up.' },
-                { step: '02', label: 'OPPONENT ACCEPTS', desc: 'Your opponent sees the challenge in their Postbox. When they accept, both bets lock into escrow automatically.' },
-                { step: '03', label: 'SHARE THE JUDGE LINK', desc: 'Once accepted, a unique judge link is generated. Copy it and send it to your agreed-upon judge — anyone with the link can access it.' },
-                { step: '04', label: 'JUDGE DECIDES', desc: 'The judge opens the link, picks the winner, and confirms. Coins are released to the winner instantly — no manual payout needed.' },
+                { step: '01', label: 'SEND A CHALLENGE', desc: 'Enter your opponent\'s username, the two players in action, the coin amount, and whether the bet is for a single GAME or the full MATCH.' },
+                { step: '02', label: 'OPPONENT ACCEPTS', desc: 'Your opponent sees the challenge in their Postbox. When they accept, both coin amounts lock into escrow automatically — no trust required.' },
+                { step: '03', label: 'SHARE THE JUDGE LINK', desc: 'Once accepted, a unique judge link is generated. Copy it and send it to your agreed-upon judge — anyone with the link can access the judge panel.' },
+                { step: '04', label: 'JUDGE RECORDS THE OUTCOME', desc: 'The judge opens the link, selects the winner, and confirms. Coins are released to the winner instantly and automatically — no manual payout needed.' },
               ].map(({ step, label, desc }) => (
                 <div key={step} className="flex items-start gap-4 px-4 py-3">
                   <span className="mono font-black text-lg flex-shrink-0" style={{ color: 'rgba(0,229,255,0.3)' }}>{step}</span>
                   <div className="flex flex-col gap-0.5">
                     <span className="mono text-xs font-black tracking-widest" style={{ color: 'var(--cyan)' }}>{label}</span>
-                    <span className="text-xs leading-relaxed" style={{ color: 'var(--text)' }}>{desc}</span>
+                    <span className="text-xs leading-relaxed" style={{ color: '#fff' }}>{desc}</span>
                   </div>
                 </div>
               ))}
@@ -168,6 +170,7 @@ export default function Postbox() {
                         </div>
                       )}
                       <span className="text-xs" style={{ color: 'var(--text)' }}>
+                        {c.betType && <><span style={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>{c.betType}</span> · </>}
                         {c.myPlayer && <>They're betting on <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{c.myPlayer}</span> · </>}
                         <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{c.amount} coins</span> each · pot: <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{c.amount * 2}</span>
                       </span>
@@ -279,7 +282,7 @@ export default function Postbox() {
                       </div>
                     )}
                     <span className="text-xs" style={{ color: 'var(--text)' }}>
-                      You're on <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{c.myPlayer}</span> · <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{c.amount} coins</span> each
+                      {c.betType && <><span style={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>{c.betType}</span> · </>}You're on <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{c.myPlayer}</span> · <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{c.amount} coins</span> each
                     </span>
                     <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem' }}>
                       Sent {new Date(c.createdAt).toLocaleString()}
@@ -299,8 +302,8 @@ export default function Postbox() {
             </div>
             <div className="hud-panel p-4 flex flex-col gap-3">
               <input
-                className="bg-transparent border px-3 py-2.5 mono text-sm outline-none w-full"
-                style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                className="postbox-input bg-transparent border px-3 py-2.5 mono text-sm outline-none w-full"
+                style={{ borderColor: 'var(--border)', color: '#fff' }}
                 placeholder="Opponent username..."
                 value={chOpponent}
                 onChange={e => { setChOpponent(e.target.value); setChMsg(null); }}
@@ -313,15 +316,15 @@ export default function Postbox() {
                 <span className="text-xs mono tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>PLAYERS IN ACTION</span>
                 <div className="flex gap-3">
                   <input
-                    className="flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
-                    style={{ borderColor: 'var(--cyan)', color: 'var(--text)' }}
+                    className="postbox-input flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
+                    style={{ borderColor: 'var(--cyan)', color: '#fff' }}
                     placeholder="My player..."
                     value={chMyPlayer}
                     onChange={e => { setChMyPlayer(e.target.value); setChMsg(null); }}
                   />
                   <input
-                    className="flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
-                    style={{ borderColor: 'var(--red)', color: 'var(--text)' }}
+                    className="postbox-input flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
+                    style={{ borderColor: 'var(--red)', color: '#fff' }}
                     placeholder="Their player..."
                     value={chTheirPlayer}
                     onChange={e => { setChTheirPlayer(e.target.value); setChMsg(null); }}
@@ -331,20 +334,26 @@ export default function Postbox() {
               <div className="flex gap-3">
                 <input
                   type="number" min={1}
-                  className="flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                  className="postbox-input flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
+                  style={{ borderColor: 'var(--border)', color: '#fff' }}
                   placeholder="Amount each..."
                   value={chAmt}
                   onChange={e => { setChAmt(e.target.value); setChMsg(null); }}
                 />
-                <input
-                  type="tel"
-                  className="flex-1 bg-transparent border px-3 py-2.5 mono text-sm outline-none"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Judge phone # (optional)"
-                  value={chPhone}
-                  onChange={e => { setChPhone(e.target.value); setChMsg(null); }}
-                />
+                {(['game', 'match'] as const).map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setChBetType(type)}
+                    className="flex-1 py-2.5 text-xs font-black mono tracking-widest uppercase"
+                    style={{
+                      border: `1px solid ${chBetType === type ? 'var(--cyan)' : 'var(--border)'}`,
+                      background: chBetType === type ? 'rgba(0,229,255,0.1)' : 'transparent',
+                      color: chBetType === type ? 'var(--cyan)' : 'var(--text)',
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
               </div>
               <button
                 className="btn btn-cyan w-full py-3 text-sm font-black tracking-widest"

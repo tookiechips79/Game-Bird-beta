@@ -170,6 +170,7 @@ export interface Challenge {
   judgeLink?: string;
   myPlayer: string;
   theirPlayer: string;
+  betType?: 'game' | 'match';
   status: ChallengeStatus;
   winnerId?: string;
   winnerName?: string;

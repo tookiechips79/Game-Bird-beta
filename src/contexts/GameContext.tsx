@@ -186,6 +186,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setGameHistory(incoming);
     });
 
+    const betAudio = new Audio('/bet-click.mp3');
+    socket.on('bet:sound', () => {
+      betAudio.currentTime = 0;
+      betAudio.play().catch(() => {});
+    });
+
     return () => { clearInterval(syncInterval); socket.disconnect(); };
   }, []);
 

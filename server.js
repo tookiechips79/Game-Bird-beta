@@ -5,6 +5,11 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Stripe from 'stripe';
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 // Database module (PostgreSQL)
 import {
@@ -114,6 +119,58 @@ app.use(cors({
 app.use((req, res, next) => {
   console.log(`📨 [HTTP] ${req.method} ${req.path} from ${req.ip}`);
   next();
+});
+
+// ── Stripe Webhook (raw body required — must be before express.json()) ────────
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  if (!stripe) return res.status(503).send('Stripe not configured');
+  const sig = req.headers['stripe-signature'];
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return res.status(503).send('Webhook secret not configured');
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, secret);
+  } catch (err) {
+    console.error('❌ Stripe webhook signature failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const pi = event.data.object;
+    const { mode, userId, amount } = pi.metadata;
+    console.log(`✅ [STRIPE] Payment succeeded — mode: ${mode}, userId: ${userId}, amount: ${amount}`);
+
+    if (userId) {
+      if (mode === 'subscription') {
+        // Update membership in DB
+        try {
+          await addTransaction(userId, {
+            id: `stripe_${pi.id}`,
+            type: 'membership_activate',
+            amount: 0,
+            description: 'Premium membership activated via Stripe',
+            timestamp: Date.now(),
+          });
+        } catch (e) { console.error('DB membership update error:', e); }
+        io.to(`user:${userId}`).emit('membership:activated', { renewsAt: Date.now() + 30 * 24 * 60 * 60 * 1000 });
+      } else if (mode === 'reload') {
+        const coins = Math.round(Number(amount) / 100);
+        try {
+          await addTransaction(userId, {
+            id: `stripe_${pi.id}`,
+            type: 'admin_add',
+            amount: coins,
+            description: `Coin reload — ${coins} coins purchased via Stripe`,
+            timestamp: Date.now(),
+          });
+        } catch (e) { console.error('DB reload error:', e); }
+        io.to(`user:${userId}`).emit('coins:reloaded', { amount: coins });
+      }
+    }
+  }
+
+  res.json({ received: true });
 });
 
 app.use(express.json());
@@ -1121,6 +1178,7 @@ io.on('connection', (socket) => {
     // Broadcast the bet update to ALL clients in the SAME ARENA (including sender)
     // 🎯 ARENA INDEPENDENCE: Only sending to arena '${arenaId}', not affecting other arenas
     io.to(`arena:${arenaId}`).emit('bet-update', data);
+    io.to(`arena:${arenaId}`).emit('bet:sound');
     console.log(`📤 [ARENA-INDEPENDENT] Broadcasted bet-update to arena '${arenaId}' ONLY`);
   });
   
@@ -2019,6 +2077,81 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// ── Stripe Payment Endpoints ─────────────────────────────────────────────────
+
+// Create a PaymentIntent (called before showing card form)
+app.post('/api/stripe/create-payment-intent', async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  const { mode, amount, userId } = req.body;
+  try {
+    const amountCents = mode === 'subscription' ? 2000 : Math.round(amount * 100);
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountCents,
+      currency: 'usd',
+      metadata: { mode, amount: String(amountCents), userId: userId || '' },
+    });
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error('❌ Stripe PaymentIntent error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a Stripe Customer + Subscription for monthly billing
+app.post('/api/stripe/create-subscription', async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  const { paymentMethodId, userId, userName, email } = req.body;
+  try {
+    // Create or retrieve customer
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    let customer = customers.data[0];
+    if (!customer) {
+      customer = await stripe.customers.create({
+        email,
+        name: userName,
+        metadata: { userId },
+        payment_method: paymentMethodId,
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+    } else {
+      await stripe.paymentMethods.attach(paymentMethodId, { customer: customer.id });
+      await stripe.customers.update(customer.id, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+    }
+
+    // Create subscription with a $20/month price
+    // You need to create this price in your Stripe dashboard or we create it inline
+    let price;
+    const prices = await stripe.prices.list({ active: true, limit: 100 });
+    price = prices.data.find(p => p.unit_amount === 2000 && p.recurring?.interval === 'month');
+    if (!price) {
+      const product = await stripe.products.create({ name: 'GameBird Premium Membership' });
+      price = await stripe.prices.create({
+        product: product.id,
+        unit_amount: 2000,
+        currency: 'usd',
+        recurring: { interval: 'month' },
+      });
+    }
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: price.id }],
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    res.json({
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
+    });
+  } catch (err) {
+    console.error('❌ Stripe Subscription error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Start the server
 startServer();

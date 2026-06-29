@@ -45,7 +45,7 @@ export default function AdminArena() {
   };
 
   return (
-    <div style={{ background: 'var(--bg)', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header />
 
       {/* Win flash overlay */}
@@ -61,112 +61,105 @@ export default function AdminArena() {
       {showAuditLog && <CoinAuditLog onClose={() => setShowAuditLog(false)} />}
 
       {/* ── Admin Controls Panel ── */}
-      <div style={{ background: '#0a0a18', borderBottom: '1px solid rgba(255,215,0,0.25)', flexShrink: 0, padding: '10px 16px' }}>
-        <div className="flex items-start gap-5 flex-wrap">
+      <div style={{ background: '#0a0a18', borderBottom: '1px solid rgba(255,215,0,0.25)', flexShrink: 0 }}>
 
-          {/* Identity */}
-          <div className="flex flex-col gap-1 justify-center" style={{ minWidth: 90 }}>
-            <span className="mono text-sm font-black tracking-[0.25em]" style={{ color: 'var(--gold)' }}>⚙ ADMIN</span>
-            <span className="mono text-xs" style={{ color: 'var(--text-dim)' }}>
-              {totalAllCoins.toLocaleString()} <span style={{ color: 'rgba(255,215,0,0.5)' }}>coins</span>
-            </span>
-          </div>
+        {/* Header row */}
+        <div className="flex items-center justify-between px-3 py-1 border-b" style={{ borderColor: 'rgba(255,215,0,0.15)' }}>
+          <span className="mono text-xs font-black tracking-widest" style={{ color: 'var(--gold)' }}>⚙ ADMIN</span>
+          <span className="mono text-xs" style={{ color: 'var(--text-dim)' }}>
+            {totalAllCoins.toLocaleString()} <span style={{ color: 'rgba(255,215,0,0.5)' }}>coins</span>
+          </span>
+          <button
+            className="btn px-2 py-1 text-xs font-black tracking-widest"
+            style={{ color: 'var(--red)', border: '1px solid var(--red)' }}
+            onClick={() => { setIsAdmin(false); navigate('/arena'); }}
+          >
+            EXIT
+          </button>
+        </div>
 
-          <Divider />
+        {/* Controls — horizontal scroll on mobile, 4-col on desktop */}
+        <div className="flex gap-px overflow-x-scroll lg:grid lg:grid-cols-4" style={{ background: 'rgba(255,215,0,0.1)', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
 
           {/* Declare Winner */}
-          <Section label="Declare Winner">
-            <button
-              className="btn btn-cyan px-4 py-2 text-xs font-black tracking-widest"
-              onClick={() => handleWin('A')}
-            >
+          <div className="flex flex-col gap-2 p-3 flex-shrink-0" style={{ background: '#0a0a18', minWidth: 160 }}>
+            <span className="mono text-xs font-black tracking-[0.2em] uppercase" style={{ color: 'rgba(255,215,0,0.6)' }}>Declare Winner</span>
+            <button className="btn btn-cyan py-2.5 text-xs font-black tracking-widest w-full" onClick={() => handleWin('A')}>
               ✓ {game.teamAName}
             </button>
-            <button
-              className="btn btn-red px-4 py-2 text-xs font-black tracking-widest"
-              onClick={() => handleWin('B')}
-            >
+            <button className="btn btn-red py-2.5 text-xs font-black tracking-widest w-full" onClick={() => handleWin('B')}>
               ✓ {game.teamBName}
             </button>
-          </Section>
+          </div>
 
-          <Divider />
+          {/* Balls */}
+          <div className="flex flex-col gap-2 p-3 flex-shrink-0" style={{ background: '#0a0a18', minWidth: 160 }}>
+            <span className="mono text-xs font-black tracking-[0.2em] uppercase" style={{ color: 'rgba(255,215,0,0.6)' }}>Balls</span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="mono text-xs truncate" style={{ color: 'var(--cyan)', maxWidth: 60 }}>{game.teamAName}</span>
+              <div className="flex items-center gap-1">
+                <button className="btn btn-ghost w-7 h-7 text-sm font-black" onClick={() => updateGame({ teamABalls: game.teamABalls - 1 })}>−</button>
+                <span className="mono font-black text-lg w-6 text-center" style={{ color: 'var(--cyan)' }}>{game.teamABalls}</span>
+                <button className="btn btn-cyan w-7 h-7 text-sm font-black" onClick={() => updateGame({ teamABalls: game.teamABalls + 1 })}>+</button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-1">
+              <span className="mono text-xs truncate" style={{ color: 'var(--red)', maxWidth: 60 }}>{game.teamBName}</span>
+              <div className="flex items-center gap-1">
+                <button className="btn btn-ghost w-7 h-7 text-sm font-black" onClick={() => updateGame({ teamBBalls: game.teamBBalls - 1 })}>−</button>
+                <span className="mono font-black text-lg w-6 text-center" style={{ color: 'var(--red)' }}>{game.teamBBalls}</span>
+                <button className="btn btn-red w-7 h-7 text-sm font-black" onClick={() => updateGame({ teamBBalls: game.teamBBalls + 1 })}>+</button>
+              </div>
+            </div>
+          </div>
 
-          {/* Balls — Player A */}
-          <Section label={`${game.teamAName} Balls`}>
-            <button className="btn btn-ghost w-8 h-8 text-sm font-black" onClick={() => updateGame({ teamABalls: game.teamABalls - 1 })}>−</button>
-            <span className="mono font-black text-xl w-8 text-center" style={{ color: 'var(--cyan)' }}>{game.teamABalls}</span>
-            <button className="btn btn-cyan w-8 h-8 text-sm font-black" onClick={() => updateGame({ teamABalls: game.teamABalls + 1 })}>+</button>
-          </Section>
-
-          {/* Balls — Player B */}
-          <Section label={`${game.teamBName} Balls`}>
-            <button className="btn btn-ghost w-8 h-8 text-sm font-black" onClick={() => updateGame({ teamBBalls: game.teamBBalls - 1 })}>−</button>
-            <span className="mono font-black text-xl w-8 text-center" style={{ color: 'var(--red)' }}>{game.teamBBalls}</span>
-            <button className="btn btn-red w-8 h-8 text-sm font-black" onClick={() => updateGame({ teamBBalls: game.teamBBalls + 1 })}>+</button>
-          </Section>
-
-          <Divider />
-
-          {/* Management */}
-          <Section label="Management">
-            <button className="btn btn-cyan px-3 py-2 text-xs font-black tracking-widest" onClick={() => setShowUserManager(true)}>
+          {/* Users & Audit */}
+          <div className="flex flex-col gap-2 p-3 flex-shrink-0" style={{ background: '#0a0a18', minWidth: 160 }}>
+            <span className="mono text-xs font-black tracking-[0.2em] uppercase" style={{ color: 'rgba(255,215,0,0.6)' }}>Management</span>
+            <button className="btn btn-cyan py-2.5 text-xs font-black tracking-widest w-full" onClick={() => setShowUserManager(true)}>
               USERS
             </button>
             <button
-              className="btn px-3 py-2 text-xs font-black tracking-widest relative"
+              className="btn py-2.5 text-xs font-black tracking-widest w-full"
               style={{ color: unackedAlerts > 0 ? 'var(--red)' : 'var(--text-dim)', border: `1px solid ${unackedAlerts > 0 ? 'var(--red)' : 'rgba(255,255,255,0.15)'}`, background: unackedAlerts > 0 ? 'rgba(255,0,64,0.08)' : 'transparent' }}
               onClick={() => setShowAuditLog(true)}
             >
               {unackedAlerts > 0 ? `⚠ AUDIT (${unackedAlerts})` : 'AUDIT LOG'}
             </button>
-            <Link to="/whitebook" className="btn btn-ghost px-3 py-2 text-xs font-black tracking-widest" style={{ textDecoration: 'none' }}>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2 p-3 flex-shrink-0" style={{ background: '#0a0a18', minWidth: 160 }}>
+            <span className="mono text-xs font-black tracking-[0.2em] uppercase" style={{ color: 'rgba(255,215,0,0.6)' }}>Actions</span>
+            <Link to="/whitebook" className="btn btn-ghost py-2.5 text-xs font-black tracking-widest w-full text-center" style={{ textDecoration: 'none' }}>
               WHITEBOOK
             </Link>
-            <button className="btn btn-ghost px-3 py-2 text-xs font-black tracking-widest" onClick={() => resetQueues()}>
+            <button className="btn btn-ghost py-2.5 text-xs font-black tracking-widest w-full" onClick={() => resetQueues()}>
               CLEAR QUEUE
             </button>
             <button
-              className="btn btn-ghost px-3 py-2 text-xs font-black tracking-widest"
+              className="btn btn-ghost py-2.5 text-xs font-black tracking-widest w-full"
               onClick={() => { if (confirm('Reset all scores to 0?')) updateGame({ teamAGames: 0, teamBGames: 0, teamABalls: 0, teamBBalls: 0, currentGameNumber: 1 }); }}
             >
               RESET SCORES
-            </button>
-          </Section>
-
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-            <button
-              className="btn px-4 py-2 text-xs font-black tracking-widest"
-              style={{ color: 'var(--red)', border: '1px solid var(--red)' }}
-              onClick={() => { setIsAdmin(false); navigate('/arena'); }}
-            >
-              EXIT ADMIN
             </button>
           </div>
 
         </div>
       </div>
 
-      {/* ── Main Content ── */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 200px 1fr', gap: 8, padding: 8, minHeight: 0, overflow: 'hidden' }}>
-
-        {/* Scoreboard */}
-        <div style={{ minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ transform: 'scale(0.82)', transformOrigin: 'top left', width: '122%' }}>
-            <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} stackedLayout />
-          </div>
+      {/* ── Main Content — stacked on mobile, 3-col on desktop ── */}
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-3 lg:grid lg:gap-2"
+        style={{ gridTemplateColumns: '1fr 200px 1fr', alignItems: 'start' }}>
+        <div className="min-w-0 w-full">
+          <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} stackedLayout />
         </div>
-
-        {/* Game Description */}
-        <div style={{ minHeight: 0, overflow: 'auto' }}>
+        <div className="min-w-0 w-full">
           <GameDescription />
         </div>
-
-        {/* Betting Queue */}
-        <div style={{ minHeight: 0, overflow: 'auto' }}>
+        <div className="min-w-0 w-full">
           <BettingQueue compactInput />
         </div>
-
       </div>
     </div>
   );

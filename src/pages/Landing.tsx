@@ -168,7 +168,7 @@ export default function Landing() {
                   ))}
                 </div>
                 <div className="px-4 py-2.5 border-t" style={{ borderColor: 'rgba(255,215,0,0.3)' }}>
-                  <Link to="/arena" className="btn btn-gold w-full py-2 text-xs" style={{ textDecoration: 'none' }}>
+                  <Link to="/membership" className="btn btn-gold w-full py-2 text-xs" style={{ textDecoration: 'none' }}>
                     SIGN UP & SUBSCRIBE
                   </Link>
                 </div>

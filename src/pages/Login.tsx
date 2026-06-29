@@ -5,6 +5,10 @@ import { useGame } from '@/contexts/GameContext';
 
 type Tab = 'login' | 'signup';
 
+const keypadSound = new Audio('/keypad.mp3');
+const playKeypad = () => { keypadSound.currentTime = 0; keypadSound.play().catch(() => {}); };
+
+
 function PinPad({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const digits = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
   return (
@@ -34,6 +38,7 @@ function PinPad({ value, onChange }: { value: string; onChange: (v: string) => v
               color: d === '⌫' ? 'var(--text-dim)' : 'var(--text)',
             }}
             onClick={() => {
+              playKeypad();
               if (d === '⌫') onChange(value.slice(0, -1));
               else if (value.length < 4) onChange(value + d);
             }}
@@ -197,7 +202,7 @@ export default function Login() {
                       value={signupName}
                       maxLength={20}
                       onChange={e => { setSignupName(e.target.value); setSignupError(''); }}
-                      onKeyDown={e => e.key === 'Enter' && signupName.trim() && setSignupStep('pin')}
+                      onKeyDown={e => { if (e.key === 'Enter' && signupName.trim()) setSignupStep('pin'); }}
                       autoFocus
                     />
                   </div>

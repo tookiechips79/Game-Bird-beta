@@ -53,6 +53,17 @@ function BetRow({ bet, isMatched, pairColor, onDelete }: { bet: Bet; isMatched: 
   );
 }
 
+const betSound = new Audio('/bet-click.mp3');
+const playBetSound = () => { betSound.currentTime = 0; betSound.play().catch(() => {}); };
+
+const hoverSound = new Audio('/hover.mp3');
+hoverSound.volume = 1.0;
+// Prime on first click so browser allows subsequent hover playback
+document.addEventListener('click', () => {
+  hoverSound.play().then(() => { hoverSound.pause(); hoverSound.currentTime = 0; }).catch(() => {});
+}, { once: true });
+const playHoverSound = () => { hoverSound.currentTime = 0; hoverSound.play().catch(() => {}); };
+
 function BetButtons({ color, teamSide, isNextGame, onPlaceBet }: {
   color: string; teamSide: 'A' | 'B'; isNextGame: boolean;
   onPlaceBet: (side: 'A' | 'B', amount: number, isNext: boolean) => void;
@@ -68,7 +79,7 @@ function BetButtons({ color, teamSide, isNextGame, onPlaceBet }: {
         <button key={amt}
           className="flex items-center justify-center text-xs font-black mono transition-all active:scale-95"
           style={{ width: 52, height: 52, borderRadius: '50%', background: `${color}18`, border: `2px solid ${color}`, color, boxShadow: `0 0 8px ${color}30`, alignSelf: 'center', margin: '0 auto' }}
-          onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; e.currentTarget.style.boxShadow = `0 0 16px ${color}`; }}
+          onMouseEnter={e => { playHoverSound(); e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; e.currentTarget.style.boxShadow = `0 0 16px ${color}`; }}
           onMouseLeave={e => { e.currentTarget.style.background = `${color}18`; e.currentTarget.style.color = color; e.currentTarget.style.boxShadow = `0 0 8px ${color}30`; }}
           onClick={() => onPlaceBet(teamSide, amt, isNextGame)}
         >{amt}</button>
@@ -222,6 +233,7 @@ export default function BettingQueue({ compactInput }: { compactInput?: boolean 
       return;
     }
     placeBet(currentUser.id, currentUser.name, side, amount, isNext);
+    playBetSound();
   };
 
   const handleDeleteBet = (bet: Bet, isNext: boolean) => {
@@ -297,7 +309,7 @@ export default function BettingQueue({ compactInput }: { compactInput?: boolean 
                 <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{totalBookedAmount * 2} ITM</span>
               </div>
             </div>
-            <div className="flex" style={{ height: 320 }}>
+            <div className="flex flex-wrap sm:flex-nowrap" style={{ minHeight: 200 }}>
               <BetButtons color="var(--cyan)" teamSide="A" isNextGame={false} onPlaceBet={handlePlaceBet} />
               <BetList label={teamAName} color="var(--cyan)" bets={teamAQueue} bookedBets={bookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, false)} />
               <BetList label={teamBName} color="var(--red)" bets={teamBQueue} bookedBets={bookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, false)} />
@@ -318,7 +330,7 @@ export default function BettingQueue({ compactInput }: { compactInput?: boolean 
                 <span className="text-xs mono" style={{ color: 'var(--gold)' }}>{nextTotalBookedAmount * 2} ITM</span>
               )}
             </div>
-            <div className="flex" style={{ height: 320 }}>
+            <div className="flex flex-wrap sm:flex-nowrap" style={{ minHeight: 200 }}>
               <BetButtons color="var(--cyan)" teamSide="A" isNextGame={true} onPlaceBet={handlePlaceBet} />
               <BetList label={teamAName} color="var(--cyan)" bets={nextTeamAQueue} bookedBets={nextBookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, true)} />
               <BetList label={teamBName} color="var(--red)" bets={nextTeamBQueue} bookedBets={nextBookedBets} currentUserId={currentUser?.id ?? null} onDeleteBet={bet => handleDeleteBet(bet, true)} />
