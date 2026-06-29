@@ -230,7 +230,7 @@ export default function AccountSettings() {
   ];
 
   return (
-    <div className="flex flex-col" style={{ minHeight: "100dvh" }} style={{ position: 'relative' }}>
+    <div className="flex flex-col" style={{ minHeight: "100dvh", position: 'relative' }}>
       <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url(/111.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,4,18,0.38)', zIndex: 1 }} />
 
@@ -263,7 +263,6 @@ export default function AccountSettings() {
                 className="px-4 py-2 text-xs font-black tracking-widest uppercase transition-colors"
                 style={{
                   color: tab === t.id ? 'var(--cyan)' : 'var(--text)',
-                  borderBottom: tab === t.id ? '2px solid var(--cyan)' : '2px solid transparent',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: tab === t.id ? '2px solid var(--cyan)' : '2px solid transparent',
