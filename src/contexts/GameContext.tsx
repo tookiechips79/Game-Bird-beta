@@ -187,10 +187,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const syncInterval = setInterval(syncClock, 30_000);
 
     socket.on('game-state-update', (incoming: GameState & { arenaId?: string }) => {
+      if (!incoming) return;
       const { arenaId: _, ...state } = incoming;
+      // Ensure arrays are never null/undefined
+      const safe: GameState = {
+        ...gameRef.current,
+        ...state,
+        teamAQueue: state.teamAQueue ?? gameRef.current.teamAQueue ?? [],
+        teamBQueue: state.teamBQueue ?? gameRef.current.teamBQueue ?? [],
+        nextTeamAQueue: state.nextTeamAQueue ?? gameRef.current.nextTeamAQueue ?? [],
+        nextTeamBQueue: state.nextTeamBQueue ?? gameRef.current.nextTeamBQueue ?? [],
+        bookedBets: state.bookedBets ?? gameRef.current.bookedBets ?? [],
+        nextBookedBets: state.nextBookedBets ?? gameRef.current.nextBookedBets ?? [],
+      };
       suppressEmitRef.current = true;
-      setGame(state as GameState);
-      gameRef.current = state as GameState;
+      setGame(safe);
+      gameRef.current = safe;
       suppressEmitRef.current = false;
     });
 
