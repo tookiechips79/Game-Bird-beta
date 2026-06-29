@@ -4,7 +4,21 @@ import Header from '@/components/layout/Header';
 import { useGame } from '@/contexts/GameContext';
 import { useUser } from '@/contexts/UserContext';
 
-function MemberCounter({ current, max }: { current: number; max: number }) {
+function MemberCounter({ max }: { max: number }) {
+  const [current, setCurrent] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    const serverUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:3001'
+      : 'https://gamebird-app-production.up.railway.app';
+    fetch(`${serverUrl}/api/users`)
+      .then(r => r.json())
+      .then(data => {
+        const count = Array.isArray(data) ? data.filter((u: any) => !u.isAdmin).length : 0;
+        setCurrent(count);
+      })
+      .catch(() => {});
+  }, []);
   const pct = Math.min(current / max, 1);
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
@@ -135,7 +149,7 @@ export default function Landing() {
           </div>
 
           {/* Member Counter */}
-          <MemberCounter current={players.length} max={500} />
+          <MemberCounter max={500} />
 
           {/* Origin Story */}
           <div className="hud-panel bracket px-6 py-8 flex flex-col gap-5"
