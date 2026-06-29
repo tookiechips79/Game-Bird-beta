@@ -163,6 +163,11 @@ export async function updateUserStats(userId, wins, losses) {
   await db.query('UPDATE users SET wins = $1, losses = $2 WHERE id = $3', [wins, losses, userId]);
 }
 
+export async function updateUserMembership(userId, status) {
+  const db = getPool();
+  await db.query('UPDATE users SET membership_status = $1 WHERE id = $2', [status, userId]);
+}
+
 export async function deleteUser(userId) {
   const db = getPool();
   await db.query('DELETE FROM users WHERE id = $1', [userId]);

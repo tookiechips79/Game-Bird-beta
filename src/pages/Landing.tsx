@@ -14,7 +14,7 @@ function MemberCounter({ max }: { max: number }) {
     fetch(`${serverUrl}/api/users`)
       .then(r => r.json())
       .then(data => {
-        const count = Array.isArray(data) ? data.filter((u: any) => !u.isAdmin).length : 0;
+        const count = Array.isArray(data) ? data.filter((u: any) => u.membershipStatus === 'premium').length : 0;
         setCurrent(count);
       })
       .catch(() => {});
@@ -79,7 +79,7 @@ function MemberCounter({ max }: { max: number }) {
       <div className="flex items-center justify-between w-full">
         <div className="flex flex-col items-center gap-0.5">
           <span className="mono font-black leading-none" style={{ fontSize: '2.2rem', color: 'var(--cyan)', textShadow: '0 0 12px rgba(0,229,255,0.6)' }}>{current}</span>
-          <span className="mono text-xs tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Signed Up</span>
+          <span className="mono text-xs tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Members</span>
         </div>
         <div className="w-px h-12" style={{ background: 'var(--border)' }} />
         <div className="flex flex-col items-center gap-0.5">

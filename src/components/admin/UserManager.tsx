@@ -7,14 +7,25 @@ function UserRow({ user }: { user: User }) {
   const [custom, setCustom] = useState('');
 
   const isPremium = user.membership?.tier === 'premium' && !user.membership?.cancelledAt;
+  const serverUrl = window.location.hostname === 'localhost'
+    ? 'http://localhost:3001'
+    : 'https://gamebird-app-production.up.railway.app';
 
-  const activateMembership = () => {
+  const activateMembership = async () => {
+    await fetch(`${serverUrl}/api/users/${user.id}/membership`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'premium' }),
+    });
     updateMembership(user.id, { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365 * 24 * 60 * 60 * 1000 });
   };
 
-  const revokeMembership = () => {
-    if (confirm(`Revoke premium for ${user.name}?`))
-      updateMembership(user.id, { tier: 'premium', startDate: user.membership?.startDate ?? Date.now(), cancelledAt: Date.now() });
+  const revokeMembership = async () => {
+    if (!confirm(`Revoke premium for ${user.name}?`)) return;
+    await fetch(`${serverUrl}/api/users/${user.id}/membership`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'free' }),
+    });
+    updateMembership(user.id, { tier: 'premium', startDate: user.membership?.startDate ?? Date.now(), cancelledAt: Date.now() });
   };
 
   return (

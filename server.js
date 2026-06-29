@@ -40,6 +40,7 @@ import {
   addGameSnapshot,
   getGameSnapshots,
   clearGameSnapshots,
+  updateUserMembership,
 } from './src/db/database.js';
 
 // Deployment version: 3
@@ -863,6 +864,20 @@ app.put('/api/users/:userId', async (req, res) => {
   } catch (error) {
     console.error(`❌ [USER-UPDATE] Error:`, error);
     res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.post('/api/users/:userId/membership', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status } = req.body; // 'premium' or 'free'
+    if (!['premium', 'free'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    await updateUserMembership(userId, status);
+    console.log(`✅ [MEMBERSHIP] ${userId} set to ${status}`);
+    res.json({ success: true, userId, membershipStatus: status });
+  } catch (error) {
+    console.error('❌ [MEMBERSHIP] Error:', error);
+    res.status(500).json({ error: 'Failed to update membership' });
   }
 });
 
