@@ -3,6 +3,7 @@
   "short_name": "Game Bird",
   "description": "Real-time betting app for Game Bird matches",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "display_override": ["fullscreen", "standalone"],
   "background_color": "#000000",

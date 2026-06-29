@@ -45,7 +45,7 @@ export default function AdminArena() {
   };
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
       <Header />
 
       {/* Win flash overlay */}
@@ -149,7 +149,7 @@ export default function AdminArena() {
       </div>
 
       {/* ── Main Content — stacked on mobile, 3-col on desktop ── */}
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-3 lg:grid lg:gap-2"
+      <div className="p-2 flex flex-col gap-3 lg:grid lg:gap-2"
         style={{ gridTemplateColumns: '1fr 200px 1fr', alignItems: 'start' }}>
         <div className="min-w-0 w-full">
           <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} stackedLayout />
