@@ -178,10 +178,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
       clockOffsetRef.current = offset;
       setClockOffset(offset);
     });
-    socket.on('connect', syncClock);
-    if (socket.connected) syncClock();
+    const joinArena = () => {
+      syncClock();
+      socket.emit('set-arena', { arenaId: 'default' });
+    };
+    socket.on('connect', joinArena);
+    if (socket.connected) joinArena();
     // Resync every 30s in case the offset drifts
     const syncInterval = setInterval(syncClock, 30_000);
+
+    socket.on('game-state-update', (incoming: GameState & { arenaId?: string }) => {
+      if (!incoming) return;
+      const { arenaId: _aid, ...state } = incoming;
+      suppressEmitRef.current = true;
+      setGame(prev => ({
+        ...prev,
+        ...state,
+        teamAQueue: state.teamAQueue ?? prev.teamAQueue ?? [],
+        teamBQueue: state.teamBQueue ?? prev.teamBQueue ?? [],
+        nextTeamAQueue: state.nextTeamAQueue ?? prev.nextTeamAQueue ?? [],
+        nextTeamBQueue: state.nextTeamBQueue ?? prev.nextTeamBQueue ?? [],
+        bookedBets: state.bookedBets ?? prev.bookedBets ?? [],
+        nextBookedBets: state.nextBookedBets ?? prev.nextBookedBets ?? [],
+      }));
+      suppressEmitRef.current = false;
+    });
 
     socket.on('history:state', (incoming: GameRecord[]) => {
       setGameHistory(incoming);
@@ -207,7 +228,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGame(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
       if (!suppressEmitRef.current && socketRef.current?.connected) {
-        socketRef.current.emit('game:update', next);
+        socketRef.current.emit('game-state-update', { ...next, arenaId: 'default' });
       }
       return next;
     });
