@@ -2061,11 +2061,14 @@ async function startServer() {
     // Initialize PostgreSQL database
     if (process.env.DATABASE_URL) {
       console.log('🚀 [SERVER] Initializing PostgreSQL database...');
-      await initializeDatabase();
-      console.log('✅ [DATABASE] Ready for operations');
+      try {
+        await initializeDatabase();
+        console.log('✅ [DATABASE] Ready for operations');
+      } catch (dbErr) {
+        console.warn('⚠️ [DATABASE] Failed to connect, running with in-memory storage:', dbErr.message);
+      }
     } else {
       console.warn('⚠️ [SERVER] DATABASE_URL not set - using in-memory storage (data will be lost on restart)');
-      console.warn('   Set DATABASE_URL environment variable to enable persistence');
     }
 
     // Start server
