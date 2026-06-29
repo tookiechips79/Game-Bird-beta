@@ -192,10 +192,10 @@ export default function Features() {
           <Section title="Membership Tiers" />
           <div className="grid grid-cols-2 gap-3">
             {/* Free */}
-            <div className="hud-panel bracket overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-[var(--border)]" style={{ background: 'rgba(0,229,255,0.04)' }}>
+            <div className="hud-panel bracket overflow-hidden" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+              <div className="px-4 py-3 border-b border-[var(--border)]" style={{ background: 'rgba(0,229,255,0.04)' }}>
                 <div className="font-black text-sm uppercase tracking-widest" style={{ color: 'var(--cyan)' }}>◎ Free Access</div>
-                <div className="mono text-sm text-[var(--text)] mt-0.5">Basic platform access</div>
+                <div className="mono text-xs text-[var(--text)] mt-0.5">$0 / month</div>
               </div>
               <div className="px-4 py-3 flex flex-col gap-2">
                 {[
@@ -203,45 +203,42 @@ export default function Features() {
                   [true, 'Track game progress'],
                   [false, 'Place bets (requires sub)'],
                   [false, 'Watch betting queues'],
+                  [false, 'Postbox challenges'],
                 ].map(([ok, label]) => (
-                  <div key={label as string} className="flex items-start gap-2 text-sm">
-                    {ok ? <Check /> : <Lock />}
-                    <span style={{ color: ok ? 'var(--text)' : 'var(--text)' }}>{label as string}</span>
+                  <div key={label as string} className="flex items-center gap-2 text-xs">
+                    <span style={{ color: ok ? 'var(--green)' : 'var(--red)', flexShrink: 0 }}>{ok ? '✓' : '✗'}</span>
+                    <span style={{ color: 'var(--text)' }}>{label as string}</span>
                   </div>
                 ))}
               </div>
-              <div className="px-4 py-2 border-t border-[var(--border)]">
-                <span className="mono text-sm font-black" style={{ color: 'var(--cyan)' }}>$0 / month</span>
+              <div className="px-4 py-2.5 border-t border-[var(--border)]">
+                <Link to="/arena" className="btn btn-cyan w-full py-2 text-xs" style={{ textDecoration: 'none' }}>
+                  GET FREE ACCESS
+                </Link>
               </div>
             </div>
 
             {/* Premium */}
-            <div className="hud-panel overflow-hidden" style={{ border: '1px solid var(--gold)', boxShadow: '0 0 20px rgba(255,215,0,0.1)' }}>
-              <div className="px-4 py-2.5 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255,215,0,0.3)', background: 'rgba(255,215,0,0.06)' }}>
+            <div className="hud-panel overflow-hidden" style={{ border: '1px solid var(--gold)', boxShadow: '0 0 20px rgba(255,215,0,0.12)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+              <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255,215,0,0.3)', background: 'rgba(255,215,0,0.06)' }}>
                 <div>
-                  <div className="font-black text-sm uppercase tracking-widest" style={{ color: 'var(--gold)' }}>★ Premium Access</div>
-                  <div className="mono text-sm text-[var(--text)] mt-0.5">Full betting experience</div>
+                  <div className="font-black text-sm uppercase tracking-widest" style={{ color: 'var(--gold)' }}>★ Premium</div>
+                  <div className="mono text-xs text-[var(--text)] mt-0.5">$20 / month</div>
                 </div>
-                <span className="mono text-sm px-2 py-0.5 font-black" style={{ border: '1px solid var(--gold)', color: 'var(--gold)' }}>
-                  POPULAR
-                </span>
+                <span className="mono text-xs px-1.5 py-0.5 font-black" style={{ border: '1px solid var(--gold)', color: 'var(--gold)' }}>HOT</span>
               </div>
               <div className="px-4 py-3 flex flex-col gap-2">
-                {[
-                  'Everything in Free Access',
-                  'Place unlimited bets',
-                  'Win real coins',
-                  'Cash out winnings',
-                  'Full transaction history',
-                ].map(label => (
-                  <div key={label} className="flex items-start gap-2 text-sm">
-                    <Check />
+                {['Everything in Free', 'Place unlimited bets', 'Win real coins', 'Cash out winnings', 'Postbox challenges'].map(label => (
+                  <div key={label} className="flex items-center gap-2 text-xs">
+                    <span style={{ color: 'var(--green)', flexShrink: 0 }}>✓</span>
                     <span style={{ color: 'var(--text)' }}>{label}</span>
                   </div>
                 ))}
               </div>
-              <div className="px-4 py-2 border-t" style={{ borderColor: 'rgba(255,215,0,0.3)' }}>
-                <span className="mono text-sm font-black" style={{ color: 'var(--gold)' }}>$20 / month</span>
+              <div className="px-4 py-2.5 border-t" style={{ borderColor: 'rgba(255,215,0,0.3)' }}>
+                <Link to="/membership" className="btn btn-gold w-full py-2 text-xs" style={{ textDecoration: 'none' }}>
+                  SIGN UP & SUBSCRIBE
+                </Link>
               </div>
             </div>
           </div>

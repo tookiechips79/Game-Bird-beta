@@ -135,6 +135,36 @@ const faqItems = [
     answer: 'The betting system uses straightforward 1:1 odds where matched bets create balanced pairs. When your bet is matched with an opposing player bet of the same amount, both bets are booked at 1:1 — ensuring fairness for all participants.',
   },
   {
+    id: 'postbox-what',
+    category: 'Postbox',
+    question: 'What is Postbox?',
+    answer: 'Postbox is how side bets get settled the RIGHT way. Two players agree on a wager, lock coins into escrow, appoint a neutral judge, and the winner gets paid automatically the moment the judge records the outcome. No cash changing hands, no "I\'ll pay you later." Set it, lock it, collect it.',
+  },
+  {
+    id: 'postbox-how',
+    category: 'Postbox',
+    question: 'How does a Postbox challenge work?',
+    answer: 'One player sends a challenge — picking their opponent, naming the two players in action, setting the coin amount, and choosing whether the bet covers a single game or the full match. The opponent sees the challenge in their Postbox and either accepts or declines. Once accepted, both players\' coins lock in escrow automatically. A unique judge link is generated — share it with your agreed-upon judge. When the match is done, the judge opens the link, selects the winner, and the coins release instantly.',
+  },
+  {
+    id: 'postbox-judge',
+    category: 'Postbox',
+    question: 'Who can be a judge?',
+    answer: 'Anyone you and your opponent agree on and trust — a friend, a rail bird, the room operator, or even a player involved in the match. They don\'t need a Game Bird account. As long as both sides trust them to call it straight, they\'re your judge. Just share the unique judge link and they can record the outcome from any device.',
+  },
+  {
+    id: 'postbox-escrow',
+    category: 'Postbox',
+    question: 'What happens to the coins while a challenge is active?',
+    answer: 'The moment both sides accept, the coins are deducted from both players and held in escrow. Neither player can access them until the judge records the outcome. Once the winner is declared, the full pot is credited to them instantly.',
+  },
+  {
+    id: 'postbox-premium',
+    category: 'Postbox',
+    question: 'Do I need a membership to use Postbox?',
+    answer: 'Yes — Postbox is a Premium feature. You need an active $20/month membership to send and receive challenges. Free accounts can view the arena and scoreboard but cannot access Postbox.',
+  },
+  {
     id: 'pwa',
     category: 'Technical',
     question: 'Can I use Game Bird on mobile?',

@@ -122,16 +122,21 @@ export default function Postbox() {
         <main className="flex-1 w-full max-w-2xl mx-auto px-3 py-6 flex flex-col gap-6">
 
           {/* Header */}
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black uppercase tracking-widest" style={{ color: 'var(--cyan)', textShadow: '0 0 8px rgba(0,229,255,0.15)' }}>
-              POSTBOX
-            </h1>
-            <div className="flex-1 border-t border-[var(--border)]" />
-            {incoming.length > 0 && (
-              <span className="mono text-xs px-2 py-0.5 font-black" style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid var(--gold)', color: 'var(--gold)' }}>
-                {incoming.length} INCOMING
-              </span>
-            )}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-black uppercase tracking-widest" style={{ color: 'var(--cyan)', textShadow: '0 0 8px rgba(0,229,255,0.15)' }}>
+                POSTBOX
+              </h1>
+              <div className="flex-1 border-t border-[var(--border)]" />
+              {incoming.length > 0 && (
+                <span className="mono text-xs px-2 py-0.5 font-black" style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid var(--gold)', color: 'var(--gold)' }}>
+                  {incoming.length} INCOMING
+                </span>
+              )}
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--text)', maxWidth: '36rem' }}>
+              Postbox is how side bets get settled the RIGHT way. Two players agree on the game, name the bet, appoint their judge, and the coins lock in escrow the moment both sides accept — no cash changing hands, no "I'll pay you later." When the action is done, the judge records the outcome and the winnings release automatically to the winner. You don't even have to be in the room. Set it, lock it, collect it. Never put the POST money on the lights! Again.
+            </p>
           </div>
 
           {/* How it works */}
