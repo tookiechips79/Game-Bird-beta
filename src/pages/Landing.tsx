@@ -4,6 +4,84 @@ import Header from '@/components/layout/Header';
 import { useGame } from '@/contexts/GameContext';
 import { useUser } from '@/contexts/UserContext';
 
+function MemberCounter({ current, max }: { current: number; max: number }) {
+  const pct = Math.min(current / max, 1);
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const filled = circumference * pct;
+  const remaining = circumference - filled;
+
+  return (
+    <div className="hud-panel bracket px-6 py-5 flex flex-col items-center gap-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+      <span className="mono text-xs font-black tracking-[0.3em] uppercase" style={{ color: 'var(--gold)' }}>
+        Exclusive Access
+      </span>
+
+      {/* Pie / donut */}
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        {/* Glow filter */}
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        {/* Track */}
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="14" />
+        {/* Filled arc — cyan */}
+        <circle
+          cx="70" cy="70" r={radius}
+          fill="none"
+          stroke="var(--cyan)"
+          strokeWidth="14"
+          strokeDasharray={`${filled} ${remaining}`}
+          strokeLinecap="round"
+          strokeDashoffset={circumference * 0.25}
+          filter="url(#glow)"
+          style={{ transition: 'stroke-dasharray 0.8s ease' }}
+        />
+        {/* Remaining arc — red */}
+        <circle
+          cx="70" cy="70" r={radius}
+          fill="none"
+          stroke="rgba(255,0,64,0.35)"
+          strokeWidth="14"
+          strokeDasharray={`${remaining} ${filled}`}
+          strokeDashoffset={circumference * 0.25 - filled}
+        />
+        {/* Center percentage */}
+        <text x="70" y="65" textAnchor="middle" dominantBaseline="middle"
+          style={{ fill: 'var(--cyan)', fontFamily: 'Share Tech Mono, monospace', fontSize: 22, fontWeight: 900 }}>
+          {Math.round(pct * 100)}%
+        </text>
+        <text x="70" y="85" textAnchor="middle" dominantBaseline="middle"
+          style={{ fill: 'rgba(224,232,255,0.5)', fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
+          FULL
+        </text>
+      </svg>
+
+      {/* Left / Right counters */}
+      <div className="flex items-center justify-between w-full">
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="mono font-black leading-none" style={{ fontSize: '2.2rem', color: 'var(--cyan)', textShadow: '0 0 12px rgba(0,229,255,0.6)' }}>{current}</span>
+          <span className="mono text-xs tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Signed Up</span>
+        </div>
+        <div className="w-px h-12" style={{ background: 'var(--border)' }} />
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="mono font-black leading-none" style={{ fontSize: '2.2rem', color: 'var(--gold)', textShadow: '0 0 12px rgba(255,215,0,0.5)' }}>{max}</span>
+          <span className="mono text-xs tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Max Capacity</span>
+        </div>
+      </div>
+
+      {/* RSVP note */}
+      <p className="text-sm leading-relaxed text-center" style={{ color: 'var(--text)', maxWidth: '36rem' }}>
+        For our first match, GameBird will be accepting only <span style={{ color: 'var(--gold)', fontWeight: 700 }}>500 exclusive members</span>. Members who sign up will be guaranteed a seat for the opening match — your membership starts the date of the first match. This RSVP gets you a seat and full betting privileges, guaranteeing you full access to an exclusive event you won't want to miss.
+      </p>
+    </div>
+  );
+}
+
 export default function Landing() {
   const { game, gameHistory, isAdmin } = useGame();
   const { users, currentUser } = useUser();
@@ -55,6 +133,9 @@ export default function Landing() {
               Subscribe to place bets and win real coins!
             </p>
           </div>
+
+          {/* Member Counter */}
+          <MemberCounter current={players.length} max={500} />
 
           {/* Origin Story */}
           <div className="hud-panel bracket px-6 py-8 flex flex-col gap-5"
