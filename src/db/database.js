@@ -158,6 +158,19 @@ export async function getAllUsers() {
   return r.rows;
 }
 
+export async function upsertUserFromSocket(id, name, isAdmin = false) {
+  const db = getPool();
+  try {
+    await db.query(
+      `INSERT INTO users (id, name, is_admin) VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+      [id, name, isAdmin]
+    );
+  } catch (err) {
+    console.error('[DB] upsertUserFromSocket error:', err.message);
+  }
+}
+
 export async function updateUserStats(userId, wins, losses) {
   const db = getPool();
   await db.query('UPDATE users SET wins = $1, losses = $2 WHERE id = $3', [wins, losses, userId]);

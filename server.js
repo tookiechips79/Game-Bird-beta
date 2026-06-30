@@ -41,6 +41,7 @@ import {
   getGameSnapshots,
   clearGameSnapshots,
   updateUserMembership,
+  upsertUserFromSocket,
 } from './src/db/database.js';
 
 // Deployment version: 3
@@ -719,6 +720,7 @@ app.get('/api/users', async (req, res) => {
         credits: userBalance || u.credits || 0,
         wins: u.wins || 0,
         losses: u.losses || 0,
+        isAdmin: u.is_admin || false,
         membershipStatus: u.membership_status || u.membershipStatus || 'free',
         subscriptionDate: u.subscription_date || u.subscriptionDate
       };
@@ -1151,7 +1153,10 @@ io.on('connection', (socket) => {
 
     // Join personal room so we can send targeted events (e.g. challenge notifications)
     socket.join(`user:${userData.id}`);
-    
+
+    // Upsert into DB so /api/users counter stays accurate
+    upsertUserFromSocket(userData.id, userData.name, userData.isAdmin || false).catch(() => {});
+
     // Broadcast updated connected users coins to all clients
     const coinsData = await calculateConnectedUsersCoins();
     io.emit('connected-users-coins-update', coinsData);

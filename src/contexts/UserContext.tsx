@@ -411,7 +411,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       usersRef.current = usersRef.current.map(u => u.id === user.id ? { ...u, online: true } : u);
       setUsersAndEmit(prev => prev.map(u => u.id === user.id ? { ...u, online: true } : u));
       // Join personal socket room for targeted notifications
-      socketRef.current?.emit('user-login', { id: user.id, name: user.name, credits: user.credits });
+      socketRef.current?.emit('user-login', { id: user.id, name: user.name, credits: user.credits, isAdmin: user.isAdmin || false });
     }
   };
 
