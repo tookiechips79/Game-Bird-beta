@@ -128,7 +128,9 @@ function loadUsers(): User[] {
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>(loadUsers);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    try { return localStorage.getItem('gb_current_user_id') || null; } catch { return null; }
+  });
   const serverDeletedIdsRef = useRef<Set<string>>(new Set());
   const [coinAuditLog, setCoinAuditLog] = useState<CoinAuditEntry[]>(loadAuditLog);
   const [gameSnapshots, setGameSnapshots] = useState<GameBalanceSnapshot[]>(loadSnapshots);
@@ -429,6 +431,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(users)); } catch {}
   }, [users]);
+
+  useEffect(() => {
+    try {
+      if (currentUserId) localStorage.setItem('gb_current_user_id', currentUserId);
+      else localStorage.removeItem('gb_current_user_id');
+    } catch {}
+  }, [currentUserId]);
 
   // Derive currentUser from ID so it's always in sync with latest users
   const currentUser = users.find(u => u.id === currentUserId) ?? null;
