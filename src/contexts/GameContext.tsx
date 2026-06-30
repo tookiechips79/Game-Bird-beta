@@ -365,18 +365,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!bet.booked) payouts.push({ userId: bet.userId, amount: bet.amount });
     }
 
-    // Snapshot before/after — only matched bet participants
-    const snapshotPlayers = g.bookedBets.flatMap(bb => [
-      { userId: bb.userIdA, name: bb.userNameA, betAmount: bb.amount },
-      { userId: bb.userIdB, name: bb.userNameB, betAmount: bb.amount },
-    ]).map(p => {
+    // Snapshot before/after — deduplicate players, sum all their matched bet amounts
+    const snapshotMap: Record<string, { userId: string; name: string; totalBet: number }> = {};
+    for (const bb of g.bookedBets) {
+      if (!snapshotMap[bb.userIdA]) snapshotMap[bb.userIdA] = { userId: bb.userIdA, name: bb.userNameA, totalBet: 0 };
+      if (!snapshotMap[bb.userIdB]) snapshotMap[bb.userIdB] = { userId: bb.userIdB, name: bb.userNameB, totalBet: 0 };
+      snapshotMap[bb.userIdA].totalBet += bb.amount;
+      snapshotMap[bb.userIdB].totalBet += bb.amount;
+    }
+    const snapshotPlayers = Object.values(snapshotMap).map(p => {
       const u = getUserById(p.userId);
-      return { userId: p.userId, name: p.name, before: (u?.credits ?? 0) + p.betAmount, after: 0 };
+      // before = current credits + all bets placed (since bets were already deducted)
+      return { userId: p.userId, name: p.name, before: (u?.credits ?? 0) + p.totalBet, after: 0 };
     });
 
     clearPendingBetsForGame(g.currentGameNumber, payouts);
 
-    // Fill in after-settlement credits and record snapshot
+    // Fill in after-settlement credits and record snapshot (one lookup per unique player)
     const afterPlayers = snapshotPlayers.map(p => {
       const u = getUserById(p.userId);
       return { ...p, after: u?.credits ?? 0 };
