@@ -1179,6 +1179,11 @@ io.on('connection', (socket) => {
     // Upsert into DB so /api/users counter stays accurate
     upsertUserFromSocket(userData.id, userData.name, userData.isAdmin || false).catch(() => {});
 
+    // Send full known user list back to this client so all devices stay in sync
+    if (gbUsersStore.length > 0) {
+      socket.emit('users:state', gbUsersStore);
+    }
+
     // Broadcast updated connected users coins to all clients
     const coinsData = await calculateConnectedUsersCoins();
     io.emit('connected-users-coins-update', coinsData);

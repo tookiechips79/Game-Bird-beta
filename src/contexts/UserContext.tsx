@@ -365,9 +365,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     socketRef.current = socket;
 
     socket.on('users:state', (incoming: User[]) => {
+      if (!Array.isArray(incoming) || incoming.length === 0) return;
       suppressEmitRef.current = true;
-      usersRef.current = incoming;
-      setUsers(incoming);
+      // Merge: keep existing local users as-is, add any new users from server
+      const merged = [...usersRef.current];
+      incoming.forEach(u => {
+        if (!merged.find(m => m.id === u.id)) merged.push(u);
+      });
+      usersRef.current = merged;
+      setUsers(merged);
       suppressEmitRef.current = false;
     });
 
