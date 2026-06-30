@@ -130,7 +130,12 @@ function loadUsers(): User[] {
 export function UserProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>(loadUsers);
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
-    try { return localStorage.getItem('gb_current_user_id') || null; } catch { return null; }
+    try {
+      // sessionStorage is cleared on new tab/window — require fresh login
+      const hasSession = sessionStorage.getItem('gb_session_active');
+      if (!hasSession) return null;
+      return localStorage.getItem('gb_current_user_id') || null;
+    } catch { return null; }
   });
   const serverDeletedIdsRef = useRef<Set<string>>(new Set());
   const [coinAuditLog, setCoinAuditLog] = useState<CoinAuditEntry[]>(loadAuditLog);
@@ -456,11 +461,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setCurrentUser = (user: User | null) => {
     setCurrentUserId(user?.id ?? null);
     if (user) {
+      try { sessionStorage.setItem('gb_session_active', '1'); } catch {}
       usersRef.current = usersRef.current.map(u => u.id === user.id ? { ...u, online: true } : u);
       setUsersAndEmit(prev => prev.map(u => u.id === user.id ? { ...u, online: true } : u));
       socketRef.current?.emit('user-login', { id: user.id, name: user.name, credits: user.credits, isAdmin: user.isAdmin || false });
       // Auto-fetch all users from DB on login
       setTimeout(fetchAndMergeFromServer, 500);
+    } else {
+      try { sessionStorage.removeItem('gb_session_active'); } catch {}
     }
   };
 
