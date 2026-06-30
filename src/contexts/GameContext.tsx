@@ -308,9 +308,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         prev[bookedKey].reduce((s, b) => s + b.amount, 0);
 
       // Record pre-game balance only on first bet (don't overwrite subsequent bets)
-      const preGameBalances = userId in prev.preGameBalances
-        ? prev.preGameBalances
-        : { ...prev.preGameBalances, [userId]: preBalance };
+      const existing = prev.preGameBalances ?? {};
+      const preGameBalances = userId in existing
+        ? existing
+        : { ...existing, [userId]: preBalance };
 
       return {
         ...prev,
