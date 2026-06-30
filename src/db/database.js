@@ -174,7 +174,7 @@ export async function upsertUserFromSocket(id, name, isAdmin = false) {
       await db.query('UPDATE users SET id = $1, is_admin = $2 WHERE name = $3', [id, isAdmin, name]);
     } else {
       await db.query(
-        `INSERT INTO users (id, name, is_admin) VALUES ($1, $2, $3)
+        `INSERT INTO users (id, name, password, is_admin) VALUES ($1, $2, '__socket__', $3)
          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
         [id, name, isAdmin]
       );
