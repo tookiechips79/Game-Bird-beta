@@ -764,7 +764,8 @@ app.get('/api/users', async (req, res) => {
       return res.json([]);
     }
     console.log(`📋 [USERS] Returning ${merged.length} users (${users.length} DB + ${memOnly.length} memory-only)`);
-    res.json(merged);
+    // Include deletedIds so clients can purge them from local state
+    res.json({ users: merged, deletedIds: [...deletedUserIds] });
   } catch (error) {
     console.error(`❌ [USERS-GET] Error fetching users:`, error);
     res.status(500).json({ error: 'Failed to fetch users' });

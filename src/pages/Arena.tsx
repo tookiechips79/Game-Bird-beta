@@ -25,7 +25,7 @@ export default function Arena() {
     setTimeout(() => {
       fetch(`${serverUrl}/api/users`)
         .then(r => r.json())
-        .then((su: any[]) => mergeServerUsers(su))
+        .then((data: any) => { const su = Array.isArray(data) ? data : (data?.users ?? []); mergeServerUsers(su, data?.deletedIds); })
         .catch(() => {})
         .finally(() => setFetchingData(false));
     }, 1000);

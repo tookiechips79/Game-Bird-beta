@@ -36,7 +36,7 @@ export default function AdminArena() {
     setTimeout(() => {
       fetch(`${serverUrl}/api/users`)
         .then(r => r.json())
-        .then((serverUsers: any[]) => mergeServerUsers(serverUsers))
+        .then((data: any) => { const su = Array.isArray(data) ? data : (data?.users ?? []); mergeServerUsers(su, data?.deletedIds); })
         .catch(() => {})
         .finally(() => setFetchingUsers(false));
     }, 1000);

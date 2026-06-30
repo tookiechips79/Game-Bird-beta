@@ -27,7 +27,7 @@ interface UserContextType {
   clearPendingBetsForGame: (gameNumber: number, payouts: { userId: string; amount: number }[]) => void;
   updateMembership: (userId: string, membership: Membership | null) => void;
   requestAllUsers: () => void;
-  mergeServerUsers: (serverUsers: any[]) => void;
+  mergeServerUsers: (serverUsers: any[], deletedIds?: string[]) => void;
   coinAuditLog: CoinAuditEntry[];
   acknowledgeAudit: (id: string) => void;
   clearAuditLog: () => void;
@@ -425,7 +425,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const fetchAndMergeFromServer = () => {
     fetch(`${SERVER_URL}/api/users`)
       .then(r => r.json())
-      .then((serverUsers: any[]) => { if (Array.isArray(serverUsers) && serverUsers.length > 0) mergeServerUsers(serverUsers); })
+      .then((data: any) => {
+        const serverUsers: any[] = Array.isArray(data) ? data : (data?.users ?? []);
+        const deletedIds: string[] = Array.isArray(data?.deletedIds) ? data.deletedIds : [];
+        mergeServerUsers(serverUsers, deletedIds);
+      })
       .catch(() => {});
   };
 
@@ -658,9 +662,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const requestAllUsers = () => { socketRef.current?.emit('users:request-all'); };
 
-  const mergeServerUsers = (serverUsers: any[]) => {
+  const mergeServerUsers = (serverUsers: any[], deletedIds: string[] = []) => {
     suppressEmitRef.current = true;
-    const merged = [...usersRef.current];
+    const deletedSet = new Set(deletedIds);
+    // Remove any locally cached users the server has marked as deleted
+    let merged = usersRef.current.filter(u => !deletedSet.has(u.id));
     serverUsers.forEach(su => {
       if (su.isAdmin) return;
       const idx = merged.findIndex(m => m.id === su.id);

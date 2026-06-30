@@ -107,7 +107,7 @@ function UserRow({ user }: { user: User }) {
 }
 
 export default function UserManager({ onClose }: { onClose: () => void }) {
-  const { users, addUser, updateMembership, requestAllUsers } = useUser();
+  const { users, addUser, updateMembership, requestAllUsers, mergeServerUsers } = useUser();
   const [newName, setNewName] = useState('');
   const [newCredits, setNewCredits] = useState('1000');
   const [syncing, setSyncing] = useState(false);
@@ -143,16 +143,10 @@ export default function UserManager({ onClose }: { onClose: () => void }) {
     setTimeout(() => {
       fetch(`${serverUrl}/api/users`)
         .then(r => r.json())
-        .then((serverUsers: any[]) => {
-          serverUsers.forEach(su => {
-            if (su.isAdmin) return;
-            const exists = users.find(u => u.id === su.id || u.name.toLowerCase() === su.name.toLowerCase());
-            if (!exists) addUser(su.name, false, su.credits || 0);
-            if (su.membershipStatus === 'premium' && exists) {
-              const alreadyPremium = exists.membership?.tier === 'premium' && !exists.membership?.cancelledAt;
-              if (!alreadyPremium) updateMembership(exists.id, { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365 * 24 * 60 * 60 * 1000 });
-            }
-          });
+        .then((data: any) => {
+          const serverUsers: any[] = Array.isArray(data) ? data : (data?.users ?? []);
+          const deletedIds: string[] = data?.deletedIds ?? [];
+          mergeServerUsers(serverUsers, deletedIds);
         })
         .catch(() => {})
         .finally(() => setSyncing(false));
