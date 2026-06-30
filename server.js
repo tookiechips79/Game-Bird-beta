@@ -945,8 +945,12 @@ app.post('/api/users/register', async (req, res) => {
 app.post('/api/users/:userId/membership', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { status } = req.body; // 'premium' or 'free'
+    const { status, name } = req.body; // 'premium' or 'free'
     if (!['premium', 'free'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    // Ensure user row exists before updating membership
+    const memUser = gbUsersStore.find(u => u.id === userId);
+    const userName = name || memUser?.name;
+    if (userName) await upsertUserFromSocket(userId, userName, false);
     await updateUserMembership(userId, status);
     console.log(`✅ [MEMBERSHIP] ${userId} set to ${status}`);
     // Notify all clients so they pick up the change immediately

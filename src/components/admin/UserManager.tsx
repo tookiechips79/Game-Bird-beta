@@ -14,7 +14,7 @@ function UserRow({ user }: { user: User }) {
   const activateMembership = async () => {
     await fetch(`${serverUrl}/api/users/${user.id}/membership`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'premium' }),
+      body: JSON.stringify({ status: 'premium', name: user.name }),
     });
     updateMembership(user.id, { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365 * 24 * 60 * 60 * 1000 });
   };
@@ -23,7 +23,7 @@ function UserRow({ user }: { user: User }) {
     if (!confirm(`Revoke premium for ${user.name}?`)) return;
     await fetch(`${serverUrl}/api/users/${user.id}/membership`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'free' }),
+      body: JSON.stringify({ status: 'free', name: user.name }),
     });
     updateMembership(user.id, { tier: 'premium', startDate: user.membership?.startDate ?? Date.now(), cancelledAt: Date.now() });
   };
