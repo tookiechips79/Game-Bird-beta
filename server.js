@@ -564,8 +564,12 @@ app.get('/api/credits/:userId/history', async (req, res) => {
 app.post('/api/credits/:userId/set', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { balance } = req.body;
+    const { balance, name } = req.body;
     if (balance === undefined || balance === null) return res.status(400).json({ error: 'balance required' });
+    // Ensure user exists in DB before writing transaction (FK constraint)
+    const memUser = gbUsersStore.find(u => u.id === userId);
+    const userName = name || memUser?.name;
+    if (userName) await upsertUserFromSocket(userId, userName, false);
     const currentBalance = await getUserBalance(userId);
     const delta = balance - currentBalance;
     if (delta !== 0) {
