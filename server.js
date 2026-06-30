@@ -719,8 +719,8 @@ app.get('/api/users', async (req, res) => {
         credits: userBalance || u.credits || 0,
         wins: u.wins || 0,
         losses: u.losses || 0,
-        membershipStatus: u.membershipStatus || 'free',
-        subscriptionDate: u.subscriptionDate
+        membershipStatus: u.membership_status || u.membershipStatus || 'free',
+        subscriptionDate: u.subscription_date || u.subscriptionDate
       };
       
       console.log(`✅ [USERS-GET] ${u.name} (${u.id}): credits=${userObj.credits}`);
@@ -759,7 +759,7 @@ app.get('/api/users/:userId', async (req, res) => {
       credits: userCredits || user.credits || 0,
       wins: user.wins || 0,
       losses: user.losses || 0,
-      membershipStatus: user.membershipStatus || 'free',
+      membershipStatus: user.membership_status || user.membershipStatus || 'free',
       subscriptionDate: user.subscriptionDate
     });
   } catch (error) {
@@ -789,7 +789,7 @@ app.post('/api/users', async (req, res) => {
       credits: newUser.credits || initialCredits,
       wins: newUser.wins || 0,
       losses: newUser.losses || 0,
-      membershipStatus: newUser.membershipStatus || 'free',
+      membershipStatus: newUser.membership_status || newUser.membershipStatus || 'free',
       subscriptionDate: newUser.subscriptionDate
     });
   } catch (error) {
@@ -822,7 +822,7 @@ app.post('/api/users/auth', async (req, res) => {
       credits: userCredits || user.credits || 0,
       wins: user.wins || 0,
       losses: user.losses || 0,
-      membershipStatus: user.membershipStatus || 'free',
+      membershipStatus: user.membership_status || user.membershipStatus || 'free',
       subscriptionDate: user.subscriptionDate
     });
   } catch (error) {
