@@ -670,11 +670,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return updated;
     };
 
+    // Capture all users who had pending bets for this game BEFORE clearing
+    const affectedIds = new Set(
+      usersRef.current
+        .filter(u => (u.pendingBets || []).some(b => b.gameNumber === gameNumber))
+        .map(u => u.id)
+    );
     const next = usersRef.current.map(update);
     usersRef.current = next;
     setUsersAndEmit(prev => prev.map(update));
-    // Persist balances for every user affected by this game settlement
-    next.forEach(u => { if (payoutMap[u.id] !== undefined) persistBalance(u.id, u.credits); });
+    // Persist ALL affected players (winners AND losers) so DB stays in sync
+    next.forEach(u => { if (affectedIds.has(u.id)) persistBalance(u.id, u.credits); });
     checkDrift(`Game #${gameNumber} settled`, next);
   };
 
