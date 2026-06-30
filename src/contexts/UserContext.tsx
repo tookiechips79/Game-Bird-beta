@@ -383,6 +383,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (usersRef.current.length > 0) {
         socket.emit('users:update', usersRef.current);
       }
+      // Also pull fresh data from DB so credit/membership changes propagate
+      fetchAndMergeFromServer();
     });
 
     socket.on('challenge:new', (challenge: Challenge) => {
@@ -676,11 +678,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
     suppressEmitRef.current = false;
   };
 
-  // Auto-refresh from server every 30s when a user is logged in
+  // Auto-refresh every 30s while logged in
   useEffect(() => {
     if (!currentUserId) return;
     const interval = setInterval(fetchAndMergeFromServer, 30000);
     return () => clearInterval(interval);
+  }, [currentUserId]);
+
+  // Refresh when tab becomes visible again
+  useEffect(() => {
+    if (!currentUserId) return;
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAndMergeFromServer(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [currentUserId]);
+
+  // Refresh on socket reconnect
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    const onReconnect = () => { if (currentUserId) fetchAndMergeFromServer(); };
+    socket.on('connect', onReconnect);
+    return () => { socket.off('connect', onReconnect); };
   }, [currentUserId]);
 
   return (

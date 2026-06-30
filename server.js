@@ -580,7 +580,8 @@ app.post('/api/credits/:userId/add', async (req, res) => {
     
     const newBalance = await getUserBalance(userId);
     console.log(`✅ [CREDITS-ADD] Success: ${userId} balance updated ${oldBalance} → ${newBalance}`);
-    
+    // Tell all clients to re-fetch so credit changes show immediately
+    io.emit('users:push');
     res.json({ success: true, transaction, newBalance });
   } catch (error) {
     console.error(`❌ [CREDITS-ADD] Error:`, error);
@@ -925,6 +926,8 @@ app.post('/api/users/:userId/membership', async (req, res) => {
     if (!['premium', 'free'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     await updateUserMembership(userId, status);
     console.log(`✅ [MEMBERSHIP] ${userId} set to ${status}`);
+    // Notify all clients so they pick up the change immediately
+    io.emit('users:push');
     res.json({ success: true, userId, membershipStatus: status });
   } catch (error) {
     console.error('❌ [MEMBERSHIP] Error:', error);
