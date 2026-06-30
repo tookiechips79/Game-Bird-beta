@@ -117,10 +117,14 @@ export default function UserManager({ onClose }: { onClose: () => void }) {
       ? 'http://localhost:3001'
       : 'https://gamebird-app-production.up.railway.app';
     setSyncing(true);
+    const payload = users.filter(u => !u.isAdmin).map(u => ({
+      id: u.id, name: u.name, isAdmin: false,
+      membership: u.membership ? { tier: u.membership.tier, cancelledAt: u.membership.cancelledAt } : null,
+    }));
     fetch(`${serverUrl}/api/users/bulk-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ users: users.filter(u => !u.isAdmin) }),
+      body: JSON.stringify({ users: payload }),
     })
       .then(r => r.json())
       .then(d => alert(`✓ Synced ${d.count} users to DB`))
