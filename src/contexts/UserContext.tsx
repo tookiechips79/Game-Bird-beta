@@ -504,32 +504,43 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const persistBalance = (userId: string, balance: number) => {
+    fetch(`${SERVER_URL}/api/credits/${userId}/set`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balance }),
+    }).catch(() => {});
+  };
+
   const deductCredits = (userId: string, amount: number, pendingBet: PendingBet): boolean => {
     const user = usersRef.current.find(u => u.id === userId);
     if (!user || user.credits < amount) return false;
-
+    const newBal = user.credits - amount;
     const tx = makeTx('bet_placed', amount, `Bet placed — Game #${pendingBet.gameNumber} (${pendingBet.teamSide === 'A' ? 'Player A' : 'Player B'})`);
     const next = usersRef.current.map(u =>
-      u.id !== userId ? u : appendTx({ ...u, credits: u.credits - amount, pendingBets: [...(u.pendingBets || []), pendingBet] }, tx)
+      u.id !== userId ? u : appendTx({ ...u, credits: newBal, pendingBets: [...(u.pendingBets || []), pendingBet] }, tx)
     );
     usersRef.current = next;
     setUsersAndEmit(prev => prev.map(u =>
-      u.id !== userId ? u : appendTx({ ...u, credits: u.credits - amount, pendingBets: [...(u.pendingBets || []), pendingBet] }, tx)
+      u.id !== userId ? u : appendTx({ ...u, credits: newBal, pendingBets: [...(u.pendingBets || []), pendingBet] }, tx)
     ));
+    persistBalance(userId, newBal);
     checkDrift(`Bet placed by ${user.name} (Game #${pendingBet.gameNumber})`, next);
     return true;
   };
 
   const refundBet = (userId: string, betId: string, amount: number) => {
+    const user = usersRef.current.find(u => u.id === userId);
+    const newBal = (user?.credits ?? 0) + amount;
     const tx = makeTx('bet_refund', amount, `Bet refunded (unmatched)`);
     const next = usersRef.current.map(u =>
-      u.id !== userId ? u : appendTx({ ...u, credits: u.credits + amount, pendingBets: (u.pendingBets || []).filter(b => b.id !== betId) }, tx)
+      u.id !== userId ? u : appendTx({ ...u, credits: newBal, pendingBets: (u.pendingBets || []).filter(b => b.id !== betId) }, tx)
     );
     usersRef.current = next;
     setUsersAndEmit(prev => prev.map(u =>
-      u.id !== userId ? u : appendTx({ ...u, credits: u.credits + amount, pendingBets: (u.pendingBets || []).filter(b => b.id !== betId) }, tx)
+      u.id !== userId ? u : appendTx({ ...u, credits: newBal, pendingBets: (u.pendingBets || []).filter(b => b.id !== betId) }, tx)
     ));
-    checkDrift(`Bet refund for ${usersRef.current.find(u => u.id === userId)?.name ?? userId}`, next);
+    persistBalance(userId, newBal);
+    checkDrift(`Bet refund for ${user?.name ?? userId}`, next);
   };
 
   const addCredits = (userId: string, amount: number, type?: TransactionType, description?: string) => {
@@ -557,18 +568,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         balanceBefore: balBefore,
         balanceAfter: newBal,
       });
-      // Persist to DB — use set endpoint so DB always matches local state
-      fetch(`${SERVER_URL}/api/credits/${userId}/set`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ balance: newBal }),
-      }).catch(() => {});
+      persistBalance(userId, newBal);
     }
   };
 
   const recordTip = (fromId: string, toId: string, amount: number) => {
-    const toName = usersRef.current.find(u => u.id === toId)?.name ?? 'player';
-    const fromName = usersRef.current.find(u => u.id === fromId)?.name ?? 'player';
+    const fromUser = usersRef.current.find(u => u.id === fromId);
+    const toUser = usersRef.current.find(u => u.id === toId);
+    const toName = toUser?.name ?? 'player';
+    const fromName = fromUser?.name ?? 'player';
     logAdminEvent('tip', { description: `${fromName} tipped ${toName} ${amount} coins`, amount, fromUserName: fromName, toUserName: toName });
     const txGiven = makeTx('tip_given', amount, `Tip sent to ${toName}`);
     const txReceived = makeTx('tip_received', amount, `Tip received from ${fromName}`);
@@ -582,6 +590,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (u.id === toId) return appendTx({ ...u, tipsReceived: (u.tipsReceived ?? 0) + amount }, txReceived);
       return u;
     }));
+    if (fromUser) persistBalance(fromId, fromUser.credits - amount);
+    if (toUser) persistBalance(toId, toUser.credits + amount);
   };
 
   const transferCredits = (fromId: string, toUsername: string, amount: number): { success: boolean; error?: string } => {
@@ -604,13 +614,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (u.id === to.id) return appendTx({ ...u, credits: u.credits + amount }, txReceived);
       return u;
     }));
+    persistBalance(fromId, from.credits - amount);
+    persistBalance(to.id, to.credits + amount);
     logAdminEvent('admin_add', {
       description: `P2P transfer: ${from.name} → ${to.name} (${amount} coins)`,
-      amount,
-      fromUserName: from.name,
-      toUserName: to.name,
-      balanceBefore: from.credits,
-      balanceAfter: from.credits - amount,
+      amount, fromUserName: from.name, toUserName: to.name,
+      balanceBefore: from.credits, balanceAfter: from.credits - amount,
     });
     return { success: true };
   };
@@ -637,6 +646,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const next = usersRef.current.map(update);
     usersRef.current = next;
     setUsersAndEmit(prev => prev.map(update));
+    // Persist balances for every user affected by this game settlement
+    next.forEach(u => { if (payoutMap[u.id] !== undefined) persistBalance(u.id, u.credits); });
     checkDrift(`Game #${gameNumber} settled`, next);
   };
 
