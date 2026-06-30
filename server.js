@@ -878,6 +878,27 @@ app.put('/api/users/:userId', async (req, res) => {
   }
 });
 
+// Admin: bulk upsert users from client into DB
+app.post('/api/users/bulk-sync', async (req, res) => {
+  try {
+    const { users } = req.body;
+    if (!Array.isArray(users)) return res.status(400).json({ error: 'users array required' });
+    let count = 0;
+    for (const u of users) {
+      if (!u.id || !u.name || u.isAdmin) continue;
+      await upsertUserFromSocket(u.id, u.name, false);
+      const isPremium = u.membership?.tier === 'premium' && !u.membership?.cancelledAt;
+      await updateUserMembership(u.id, isPremium ? 'premium' : 'free');
+      count++;
+    }
+    console.log(`✅ [BULK-SYNC] Synced ${count} users to DB`);
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('❌ [BULK-SYNC]', error);
+    res.status(500).json({ error: 'Failed to bulk sync' });
+  }
+});
+
 app.post('/api/users/register', async (req, res) => {
   try {
     const { id, name, isAdmin } = req.body;

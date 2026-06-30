@@ -112,6 +112,22 @@ export default function UserManager({ onClose }: { onClose: () => void }) {
   const [newCredits, setNewCredits] = useState('1000');
   const [syncing, setSyncing] = useState(false);
 
+  const pushToDb = () => {
+    const serverUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:3001'
+      : 'https://gamebird-app-production.up.railway.app';
+    setSyncing(true);
+    fetch(`${serverUrl}/api/users/bulk-sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ users: users.filter(u => !u.isAdmin) }),
+    })
+      .then(r => r.json())
+      .then(d => alert(`✓ Synced ${d.count} users to DB`))
+      .catch(() => alert('Sync failed'))
+      .finally(() => setSyncing(false));
+  };
+
   const syncFromServer = () => {
     const serverUrl = window.location.hostname === 'localhost'
       ? 'http://localhost:3001'
@@ -155,6 +171,9 @@ export default function UserManager({ onClose }: { onClose: () => void }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: '#050510', borderBottom: '1px solid rgba(0,229,255,0.3)', position: 'sticky', top: 0, zIndex: 1 }}>
         <span style={{ color: '#00e5ff', fontWeight: 900, fontSize: 16, letterSpacing: 3, textTransform: 'uppercase' }}>User Manager</span>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={pushToDb} disabled={syncing} style={{ background: 'none', border: '1px solid var(--green)', color: 'var(--green)', padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+            ↑ PUSH TO DB
+          </button>
           <button onClick={syncFromServer} disabled={syncing} style={{ background: 'none', border: '1px solid var(--gold)', color: 'var(--gold)', padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
             {syncing ? 'SYNCING...' : '⟳ REFRESH'}
           </button>
