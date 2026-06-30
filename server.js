@@ -1455,8 +1455,7 @@ io.on('connection', (socket) => {
     incoming.forEach(u => {
       if (!u.isAdmin && u.id && u.name && !deletedUserIds.has(u.id)) {
         upsertUserFromSocket(u.id, u.name, false).catch(() => {});
-        const isPremium = u.membership?.tier === 'premium' && !u.membership?.cancelledAt;
-        updateUserMembership(u.id, isPremium ? 'premium' : 'free').catch(() => {});
+        // Do NOT update membership from socket — only the /api/users/:id/membership endpoint may change it
       }
     });
   });

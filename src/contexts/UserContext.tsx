@@ -383,7 +383,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     socket.on('users:push', () => {
       const toEmit = usersRef.current
         .filter(u => !serverDeletedIdsRef.current.has(u.id))
-        .map(({ id, name, isAdmin, membership, online }) => ({ id, name, isAdmin, membership, online }));
+        .map(({ id, name, isAdmin, online }) => ({ id, name, isAdmin, online }));
       if (toEmit.length > 0) socket.emit('users:update', toEmit);
       fetchAndMergeFromServer();
     });
@@ -417,9 +417,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setUsers(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
       if (!suppressEmitRef.current && socketRef.current?.connected) {
-        // Strip credits before emitting — credits are DB-authoritative only
-        // and must never flow client→server→DB or corrupt other devices
-        const safe = next.map(({ id, name, isAdmin, membership, online }) => ({ id, name, isAdmin, membership, online }));
+        // Only send identity — credits and membership are DB-authoritative and must never flow client→server
+        const safe = next.map(({ id, name, isAdmin, online }) => ({ id, name, isAdmin, online }));
         socketRef.current.emit('users:update', safe);
       }
       return next;
