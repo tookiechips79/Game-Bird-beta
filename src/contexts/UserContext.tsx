@@ -289,6 +289,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     list.reduce((s, u) => s + u.credits + (u.pendingBets ?? []).reduce((ps, b) => ps + b.amount, 0), 0);
 
   const expectedTotalRef = useRef<number>(totalWithPending(users));
+  const initialSyncDoneRef = useRef(false);
   // Always recompute on load so the expected is in sync with the current formula
   useEffect(() => {
     const t = totalWithPending(users);
@@ -733,6 +734,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
     usersRef.current = merged;
     setUsers(merged);
+    // On first server sync, reset expectedTotal to the authoritative DB total
+    // to avoid false drift alerts from stale localStorage values
+    if (!initialSyncDoneRef.current) {
+      initialSyncDoneRef.current = true;
+      const t = totalWithPending(merged);
+      expectedTotalRef.current = t;
+      try { localStorage.setItem(EXPECTED_KEY, String(t)); } catch {}
+    }
     suppressEmitRef.current = false;
   };
 
