@@ -107,38 +107,40 @@ function UserRow({ user }: { user: User }) {
 }
 
 export default function UserManager({ onClose }: { onClose: () => void }) {
-  const { users, addUser, updateMembership } = useUser();
+  const { users, addUser, updateMembership, requestAllUsers } = useUser();
   const [newName, setNewName] = useState('');
   const [newCredits, setNewCredits] = useState('1000');
   const [syncing, setSyncing] = useState(false);
 
-  // On open, fetch server users and merge any that aren't in local state
-  React.useEffect(() => {
+  const syncFromServer = () => {
     const serverUrl = window.location.hostname === 'localhost'
       ? 'http://localhost:3001'
       : 'https://gamebird-app-production.up.railway.app';
     setSyncing(true);
-    fetch(`${serverUrl}/api/users`)
-      .then(r => r.json())
-      .then((serverUsers: any[]) => {
-        serverUsers.forEach(su => {
-          if (su.isAdmin) return;
-          const exists = users.find(u => u.id === su.id || u.name.toLowerCase() === su.name.toLowerCase());
-          if (!exists) {
-            addUser(su.name, false, su.credits || 0);
-          }
-          // Sync premium status if server says premium
-          if (su.membershipStatus === 'premium' && exists) {
-            const alreadyPremium = exists.membership?.tier === 'premium' && !exists.membership?.cancelledAt;
-            if (!alreadyPremium) {
-              updateMembership(exists.id, { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365 * 24 * 60 * 60 * 1000 });
+    // Ask all connected clients to push their user lists first
+    requestAllUsers();
+    // Wait a moment then fetch the aggregated list from server
+    setTimeout(() => {
+      fetch(`${serverUrl}/api/users`)
+        .then(r => r.json())
+        .then((serverUsers: any[]) => {
+          serverUsers.forEach(su => {
+            if (su.isAdmin) return;
+            const exists = users.find(u => u.id === su.id || u.name.toLowerCase() === su.name.toLowerCase());
+            if (!exists) addUser(su.name, false, su.credits || 0);
+            if (su.membershipStatus === 'premium' && exists) {
+              const alreadyPremium = exists.membership?.tier === 'premium' && !exists.membership?.cancelledAt;
+              if (!alreadyPremium) updateMembership(exists.id, { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365 * 24 * 60 * 60 * 1000 });
             }
-          }
-        });
-      })
-      .catch(() => {})
-      .finally(() => setSyncing(false));
-  }, []);
+          });
+        })
+        .catch(() => {})
+        .finally(() => setSyncing(false));
+    }, 1500);
+  };
+
+  // Sync on open
+  React.useEffect(() => { syncFromServer(); }, []);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -151,8 +153,13 @@ export default function UserManager({ onClose }: { onClose: () => void }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: '#050510', borderBottom: '1px solid rgba(0,229,255,0.3)', position: 'sticky', top: 0, zIndex: 1 }}>
-        <span style={{ color: '#00e5ff', fontWeight: 900, fontSize: 16, letterSpacing: 3, textTransform: 'uppercase' }}>User Manager {syncing && <span style={{ color: 'var(--gold)', fontSize: 11 }}>SYNCING...</span>}</span>
-        <button onClick={onClose} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '6px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✕ CLOSE</button>
+        <span style={{ color: '#00e5ff', fontWeight: 900, fontSize: 16, letterSpacing: 3, textTransform: 'uppercase' }}>User Manager</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={syncFromServer} disabled={syncing} style={{ background: 'none', border: '1px solid var(--gold)', color: 'var(--gold)', padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+            {syncing ? 'SYNCING...' : '⟳ REFRESH'}
+          </button>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '6px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✕ CLOSE</button>
+        </div>
       </div>
 
       {/* User list */}

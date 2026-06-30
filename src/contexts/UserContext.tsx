@@ -26,6 +26,7 @@ interface UserContextType {
   transferCredits: (fromId: string, toUsername: string, amount: number) => { success: boolean; error?: string };
   clearPendingBetsForGame: (gameNumber: number, payouts: { userId: string; amount: number }[]) => void;
   updateMembership: (userId: string, membership: Membership | null) => void;
+  requestAllUsers: () => void;
   coinAuditLog: CoinAuditEntry[];
   acknowledgeAudit: (id: string) => void;
   clearAuditLog: () => void;
@@ -370,6 +371,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       suppressEmitRef.current = false;
     });
 
+    // Server asks all clients to re-push their user list (triggered by admin opening User Manager)
+    socket.on('users:push', () => {
+      if (usersRef.current.length > 0) {
+        socket.emit('users:update', usersRef.current);
+      }
+    });
+
     socket.on('challenge:new', (challenge: Challenge) => {
       if (!challengesRef.current.find(c => c.id === challenge.id)) {
         updateChallenges([challenge, ...challengesRef.current]);
@@ -613,8 +621,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const requestAllUsers = () => { socketRef.current?.emit('users:request-all'); };
+
   return (
-    <UserContext.Provider value={{ users, currentUser, setCurrentUser, addUser, setPin, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge }}>
+    <UserContext.Provider value={{ users, currentUser, setCurrentUser, addUser, setPin, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers }}>
       {children}
     </UserContext.Provider>
 

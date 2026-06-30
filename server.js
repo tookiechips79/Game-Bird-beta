@@ -1303,16 +1303,27 @@ io.on('connection', (socket) => {
   // Store latest user list from any client so /api/users counter stays accurate
   socket.on('users:update', (incoming) => {
     if (!Array.isArray(incoming) || incoming.length === 0) return;
-    gbUsersStore = incoming;
-    // Persist every non-admin user to DB so the list survives server restarts
+    // Merge incoming users into gbUsersStore (keep highest-credit version per id)
+    const merged = [...gbUsersStore];
+    incoming.forEach(u => {
+      const idx = merged.findIndex(m => m.id === u.id);
+      if (idx === -1) merged.push(u);
+      else merged[idx] = u;
+    });
+    gbUsersStore = merged;
+    // Persist to DB so list survives server restarts
     incoming.forEach(u => {
       if (!u.isAdmin && u.id && u.name) {
         upsertUserFromSocket(u.id, u.name, false).catch(() => {});
-        // Sync membership status if premium
         const isPremium = u.membership?.tier === 'premium' && !u.membership?.cancelledAt;
         updateUserMembership(u.id, isPremium ? 'premium' : 'free').catch(() => {});
       }
     });
+  });
+
+  // Admin requesting full user list — ask all connected clients to push their users
+  socket.on('users:request-all', () => {
+    io.emit('users:push');
   });
 
   socket.on('gb:state', (data) => {
