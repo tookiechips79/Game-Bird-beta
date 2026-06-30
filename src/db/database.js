@@ -30,7 +30,8 @@ export async function initializeDatabase() {
       tips_received INTEGER DEFAULT 0,
       membership_status TEXT DEFAULT 'free',
       subscription_date BIGINT,
-      created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000
+      created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000,
+      is_deleted BOOLEAN DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS transactions (
@@ -113,6 +114,8 @@ export async function initializeDatabase() {
       players JSONB NOT NULL DEFAULT '[]'
     );
   `);
+  // Add is_deleted column to existing DBs that don't have it yet
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
   console.log('✅ [DB] All tables initialized');
 }
 
@@ -154,15 +157,19 @@ export async function authenticateUser(name, password) {
 
 export async function getAllUsers() {
   const db = getPool();
-  const r = await db.query('SELECT * FROM users ORDER BY created_at ASC');
+  const r = await db.query('SELECT * FROM users WHERE is_deleted = FALSE ORDER BY created_at ASC');
   return r.rows;
 }
 
 export async function upsertUserFromSocket(id, name, isAdmin = false) {
   const db = getPool();
   try {
+    // Never re-add a deleted user
+    const deletedCheck = await db.query('SELECT id FROM users WHERE (id = $1 OR name = $2) AND is_deleted = TRUE', [id, name]);
+    if (deletedCheck.rows.length > 0) return;
+
     // If same name exists under a different ID, update that row to use the new ID
-    const existing = await db.query('SELECT id FROM users WHERE name = $1', [name]);
+    const existing = await db.query('SELECT id FROM users WHERE name = $1 AND is_deleted = FALSE', [name]);
     if (existing.rows.length > 0 && existing.rows[0].id !== id) {
       await db.query('UPDATE users SET id = $1, is_admin = $2 WHERE name = $3', [id, isAdmin, name]);
     } else {
@@ -189,7 +196,8 @@ export async function updateUserMembership(userId, status) {
 
 export async function deleteUser(userId) {
   const db = getPool();
-  await db.query('DELETE FROM users WHERE id = $1', [userId]);
+  // Soft delete — marks as deleted so syncs never re-add this user
+  await db.query('UPDATE users SET is_deleted = TRUE WHERE id = $1', [userId]);
 }
 
 // ─────────────────────────────────────────────

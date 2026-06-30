@@ -280,6 +280,7 @@ const createDefaultGameState = () => ({
 // Map to store game state for each arena
 const gbStateStore = {}; // GameBird V2 frontend state per arena
 let gbUsersStore = []; // Latest full user list broadcast from any client
+const deletedUserIds = new Set(); // IDs that should never be re-added
 
 let arenaGameStates = {
   'default': createDefaultGameState(),
@@ -733,7 +734,7 @@ app.get('/api/users', async (req, res) => {
 
     // Merge in any gbUsersStore users not in DB
     const dbIds = new Set(users.map(u => u.id));
-    const memOnly = gbUsersStore.filter(u => !u.isAdmin && !dbIds.has(u.id));
+    const memOnly = gbUsersStore.filter(u => !u.isAdmin && !dbIds.has(u.id) && !deletedUserIds.has(u.id));
     const merged = [
       ...users,
       ...memOnly.map(u => ({
@@ -940,7 +941,7 @@ app.delete('/api/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     await deleteUser(userId);
-    // Remove from in-memory store too
+    deletedUserIds.add(userId);
     gbUsersStore = gbUsersStore.filter(u => u.id !== userId);
     console.log(`✅ [USER-DELETE] ${userId} deleted`);
     res.json({ success: true });
@@ -1414,17 +1415,18 @@ io.on('connection', (socket) => {
   // Store latest user list from any client so /api/users counter stays accurate
   socket.on('users:update', (incoming) => {
     if (!Array.isArray(incoming) || incoming.length === 0) return;
-    // Merge incoming users into gbUsersStore (keep highest-credit version per id)
+    // Merge incoming users into gbUsersStore — skip any that have been deleted
     const merged = [...gbUsersStore];
     incoming.forEach(u => {
+      if (deletedUserIds.has(u.id)) return; // never re-add deleted users
       const idx = merged.findIndex(m => m.id === u.id);
       if (idx === -1) merged.push(u);
       else merged[idx] = u;
     });
     gbUsersStore = merged;
-    // Persist to DB so list survives server restarts
+    // Persist to DB
     incoming.forEach(u => {
-      if (!u.isAdmin && u.id && u.name) {
+      if (!u.isAdmin && u.id && u.name && !deletedUserIds.has(u.id)) {
         upsertUserFromSocket(u.id, u.name, false).catch(() => {});
         const isPremium = u.membership?.tier === 'premium' && !u.membership?.cancelledAt;
         updateUserMembership(u.id, isPremium ? 'premium' : 'free').catch(() => {});
@@ -2250,6 +2252,14 @@ async function startServer() {
       console.log('🚀 [SERVER] Initializing PostgreSQL database...');
       try {
         await initializeDatabase();
+        // Load deleted user IDs so we never re-add them from socket syncs
+        try {
+          const { getPool } = await import('./src/db/database.js');
+          const pool = getPool();
+          const deleted = await pool.query('SELECT id FROM users WHERE is_deleted = TRUE');
+          deleted.rows.forEach(r => deletedUserIds.add(r.id));
+          console.log(`✅ [DATABASE] Loaded ${deletedUserIds.size} deleted user IDs`);
+        } catch {}
         console.log('✅ [DATABASE] Ready for operations');
       } catch (dbErr) {
         console.warn('⚠️ [DATABASE] Failed to connect, running with in-memory storage:', dbErr.message);
