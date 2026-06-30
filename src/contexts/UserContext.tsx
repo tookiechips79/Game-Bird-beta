@@ -426,6 +426,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setUsersAndEmit(prev => prev.map(u => u.id === user.id ? { ...u, online: true } : u));
       // Join personal socket room for targeted notifications
       socketRef.current?.emit('user-login', { id: user.id, name: user.name, credits: user.credits, isAdmin: user.isAdmin || false });
+      // Fetch full user list from DB via HTTP and merge into local state
+      const serverUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:3001'
+        : 'https://gamebird-app-production.up.railway.app';
+      fetch(`${serverUrl}/api/users`)
+        .then(r => r.json())
+        .then((serverUsers: any[]) => {
+          if (!Array.isArray(serverUsers) || serverUsers.length === 0) return;
+          suppressEmitRef.current = true;
+          const merged = [...usersRef.current];
+          serverUsers.forEach(su => {
+            const idx = merged.findIndex(m => m.id === su.id);
+            if (idx === -1) {
+              // New user not in local — add them
+              merged.push({ id: su.id, name: su.name, credits: su.credits || 0, isAdmin: su.isAdmin || false,
+                membership: su.membershipStatus === 'premium' ? { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365*24*60*60*1000 } : undefined,
+                pendingBets: [] });
+            } else {
+              // Sync membership status from DB
+              if (su.membershipStatus === 'premium' && merged[idx].membership?.tier !== 'premium') {
+                merged[idx] = { ...merged[idx], membership: { tier: 'premium', startDate: Date.now(), renewsAt: Date.now() + 365*24*60*60*1000 } };
+              }
+            }
+          });
+          usersRef.current = merged;
+          setUsers(merged);
+          suppressEmitRef.current = false;
+        })
+        .catch(() => {});
     }
   };
 
