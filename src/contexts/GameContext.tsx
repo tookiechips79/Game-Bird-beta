@@ -155,6 +155,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const gameRef = useRef(game);
   useEffect(() => { gameRef.current = game; }, [game]);
+  // Pre-game balances captured at first bet per user — local ref, never affected by socket updates
+  const preGameBalancesRef = useRef<Record<string, number>>({});
 
   // Socket.io — real-time sync
   const socketRef = useRef<Socket | null>(null);
@@ -288,7 +290,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
 
     // Capture balance BEFORE deduction — only on first bet per user per game
-    const preBalance = user.credits;
+    if (!(userId in preGameBalancesRef.current)) {
+      preGameBalancesRef.current[userId] = user.credits;
+    }
 
     // Deduct immediately (pending bet system)
     const ok = deductCredits(userId, amount, { id: betId, gameNumber, amount, teamSide });
@@ -307,12 +311,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const totalBooked = bookedBets.reduce((s, b) => s + b.amount, 0) +
         prev[bookedKey].reduce((s, b) => s + b.amount, 0);
 
-      // Record pre-game balance only on first bet (don't overwrite subsequent bets)
-      const existing = prev.preGameBalances ?? {};
-      const preGameBalances = userId in existing
-        ? existing
-        : { ...existing, [userId]: preBalance };
-
       return {
         ...prev,
         [aKey]: updatedA,
@@ -320,7 +318,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         [bookedKey]: [...prev[bookedKey], ...bookedBets],
         [totalKey]: totalBooked,
         betCounter: prev.betCounter + 1,
-        preGameBalances,
       };
     });
 
@@ -400,7 +397,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
 
     const afterPlayers = Object.entries(snapMap).map(([userId, data]) => {
-      const before = g.preGameBalances[userId] ?? 0;
+      const before = preGameBalancesRef.current[userId] ?? 0;
       const payout = payoutMap[userId] || 0;
       const after = before - data.matchedAmount + payout;
       return { userId, name: data.name, before, after, bets: data.bets };
@@ -484,6 +481,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       lastWinner: winningTeam,
       preGameBalances: {},
     }));
+    preGameBalancesRef.current = {};
   }, [getUserById, clearPendingBetsForGame, refundBet, recordGameSnapshot]);
 
   const clearHistory = useCallback(() => {
