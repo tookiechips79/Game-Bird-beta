@@ -365,36 +365,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!bet.booked) payouts.push({ userId: bet.userId, amount: bet.amount });
     }
 
-    // Snapshot before/after — deduplicate players, sum all their matched bet amounts
-    const snapshotMap: Record<string, { userId: string; name: string; totalBet: number }> = {};
-    for (const bb of g.bookedBets) {
-      if (!snapshotMap[bb.userIdA]) snapshotMap[bb.userIdA] = { userId: bb.userIdA, name: bb.userNameA, totalBet: 0 };
-      if (!snapshotMap[bb.userIdB]) snapshotMap[bb.userIdB] = { userId: bb.userIdB, name: bb.userNameB, totalBet: 0 };
-      snapshotMap[bb.userIdA].totalBet += bb.amount;
-      snapshotMap[bb.userIdB].totalBet += bb.amount;
-    }
-    // Build per-player bet sub-rows
-    const playerBets: Record<string, { opponentName: string; amount: number; won: boolean }[]> = {};
+    // Build snapshot purely from game data — no ref timing issues
+    // Collect unique players and their matched bets
+    type SnapPlayer = { name: string; matchedAmount: number; bets: { opponentName: string; amount: number; won: boolean }[] };
+    const snapMap: Record<string, SnapPlayer> = {};
     for (const bb of g.bookedBets) {
       const aWon = winningTeam === 'A';
-      if (!playerBets[bb.userIdA]) playerBets[bb.userIdA] = [];
-      if (!playerBets[bb.userIdB]) playerBets[bb.userIdB] = [];
-      playerBets[bb.userIdA].push({ opponentName: bb.userNameB, amount: bb.amount, won: aWon });
-      playerBets[bb.userIdB].push({ opponentName: bb.userNameA, amount: bb.amount, won: !aWon });
+      if (!snapMap[bb.userIdA]) snapMap[bb.userIdA] = { name: bb.userNameA, matchedAmount: 0, bets: [] };
+      if (!snapMap[bb.userIdB]) snapMap[bb.userIdB] = { name: bb.userNameB, matchedAmount: 0, bets: [] };
+      snapMap[bb.userIdA].matchedAmount += bb.amount;
+      snapMap[bb.userIdB].matchedAmount += bb.amount;
+      snapMap[bb.userIdA].bets.push({ opponentName: bb.userNameB, amount: bb.amount, won: aWon });
+      snapMap[bb.userIdB].bets.push({ opponentName: bb.userNameA, amount: bb.amount, won: !aWon });
     }
 
-    const snapshotPlayers = Object.values(snapshotMap).map(p => {
-      const u = getUserById(p.userId);
-      return { userId: p.userId, name: p.name, before: (u?.credits ?? 0) + p.totalBet, after: 0, bets: playerBets[p.userId] ?? [] };
+    // before = current credits + matched bets (bets were already deducted)
+    // after  = before - matched bets + payout (computed directly — no timing dependency)
+    const afterPlayers = Object.entries(snapMap).map(([userId, data]) => {
+      const u = getUserById(userId);
+      const before = (u?.credits ?? 0) + data.matchedAmount;
+      const payout = payoutMap[userId] || 0;
+      const after = before - data.matchedAmount + payout;
+      return { userId, name: data.name, before, after, bets: data.bets };
     });
 
     clearPendingBetsForGame(g.currentGameNumber, payouts);
-
-    // Fill in after-settlement credits and record snapshot (one lookup per unique player)
-    const afterPlayers = snapshotPlayers.map(p => {
-      const u = getUserById(p.userId);
-      return { ...p, after: u?.credits ?? 0 };
-    });
     recordGameSnapshot({
       id: `snap_${Date.now()}`,
       gameNumber: g.currentGameNumber,
