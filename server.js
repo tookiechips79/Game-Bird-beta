@@ -278,6 +278,7 @@ const createDefaultGameState = () => ({
 
 // Map to store game state for each arena
 const gbStateStore = {}; // GameBird V2 frontend state per arena
+let gbUsersStore = []; // Latest full user list broadcast from any client
 
 let arenaGameStates = {
   'default': createDefaultGameState(),
@@ -729,6 +730,14 @@ app.get('/api/users', async (req, res) => {
       return userObj;
     }));
     
+    // Fall back to in-memory store if DB is empty
+    if (users.length === 0 && gbUsersStore.length > 0) {
+      console.log(`📋 [USERS] DB empty, returning ${gbUsersStore.length} users from memory`);
+      return res.json(gbUsersStore.map(u => ({
+        id: u.id, name: u.name, isAdmin: u.isAdmin || false,
+        membershipStatus: u.membership?.tier === 'premium' && !u.membership?.cancelledAt ? 'premium' : 'free',
+      })));
+    }
     console.log(`📋 [USERS] Returning ${users.length} users with verified credits`);
     res.json(users);
   } catch (error) {
@@ -1291,6 +1300,13 @@ io.on('connection', (socket) => {
   
   // Handle game state updates
   // GameBird V2 frontend sync — separate namespace to avoid schema conflicts
+  // Store latest user list from any client so /api/users counter stays accurate
+  socket.on('users:update', (incoming) => {
+    if (Array.isArray(incoming) && incoming.length > 0) {
+      gbUsersStore = incoming;
+    }
+  });
+
   socket.on('gb:state', (data) => {
     if (!data) return;
     const arenaId = data.arenaId || 'default';
