@@ -878,6 +878,19 @@ app.put('/api/users/:userId', async (req, res) => {
   }
 });
 
+app.post('/api/users/register', async (req, res) => {
+  try {
+    const { id, name, isAdmin } = req.body;
+    if (!id || !name) return res.status(400).json({ error: 'id and name required' });
+    await upsertUserFromSocket(id, name, isAdmin || false);
+    console.log(`✅ [REGISTER] ${name} (${id})`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ [REGISTER] Error:', error);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
 app.post('/api/users/:userId/membership', async (req, res) => {
   try {
     const { userId } = req.params;

@@ -437,6 +437,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
     usersRef.current = [...usersRef.current, user];
     setUsersAndEmit(prev => [...prev, user]);
+    // Persist to DB immediately on signup so admin can always see the user
+    const serverUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:3001'
+      : 'https://gamebird-app-production.up.railway.app';
+    fetch(`${serverUrl}/api/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: user.id, name: user.name, isAdmin }),
+    }).catch(() => {});
     setExpected(expectedTotalRef.current + initialCredits);
     if (initialCredits > 0) {
       logAdminEvent('user_created', { description: `New user "${name}" created with ${initialCredits} starting coins`, amount: initialCredits, userName: name, balanceAfter: initialCredits });
