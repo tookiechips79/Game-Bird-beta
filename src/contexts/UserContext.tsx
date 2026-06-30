@@ -489,6 +489,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setExpected(expectedTotalRef.current - deletedCredits);
     if (deleted) {
       logAdminEvent('user_deleted', { description: `User "${deleted.name}" deleted with ${deletedCredits} coins removed from pool`, amount: deletedCredits, userName: deleted.name, balanceBefore: deletedCredits });
+      // Persist deletion to DB so they don't return on next sync
+      fetch(`${SERVER_URL}/api/users/${userId}`, { method: 'DELETE' }).catch(() => {});
     }
   };
 

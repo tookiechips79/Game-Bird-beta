@@ -161,11 +161,17 @@ export async function getAllUsers() {
 export async function upsertUserFromSocket(id, name, isAdmin = false) {
   const db = getPool();
   try {
-    await db.query(
-      `INSERT INTO users (id, name, is_admin) VALUES ($1, $2, $3)
-       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-      [id, name, isAdmin]
-    );
+    // If same name exists under a different ID, update that row to use the new ID
+    const existing = await db.query('SELECT id FROM users WHERE name = $1', [name]);
+    if (existing.rows.length > 0 && existing.rows[0].id !== id) {
+      await db.query('UPDATE users SET id = $1, is_admin = $2 WHERE name = $3', [id, isAdmin, name]);
+    } else {
+      await db.query(
+        `INSERT INTO users (id, name, is_admin) VALUES ($1, $2, $3)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+        [id, name, isAdmin]
+      );
+    }
   } catch (err) {
     console.error('[DB] upsertUserFromSocket error:', err.message);
   }

@@ -42,6 +42,7 @@ import {
   clearGameSnapshots,
   updateUserMembership,
   upsertUserFromSocket,
+  deleteUser,
 } from './src/db/database.js';
 
 // Deployment version: 3
@@ -932,6 +933,48 @@ app.post('/api/users/:userId/membership', async (req, res) => {
   } catch (error) {
     console.error('❌ [MEMBERSHIP] Error:', error);
     res.status(500).json({ error: 'Failed to update membership' });
+  }
+});
+
+app.delete('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await deleteUser(userId);
+    // Remove from in-memory store too
+    gbUsersStore = gbUsersStore.filter(u => u.id !== userId);
+    console.log(`✅ [USER-DELETE] ${userId} deleted`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ [USER-DELETE] Error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Clean up duplicate name entries, keeping the most recently created one
+app.post('/api/users/deduplicate', async (req, res) => {
+  try {
+    const allUsers = await getAllUsers();
+    const seen = new Map();
+    let removed = 0;
+    for (const u of allUsers) {
+      const key = u.name.toLowerCase();
+      if (seen.has(key)) {
+        // Duplicate — delete the older one (keep the one with the later id/timestamp)
+        const prev = seen.get(key);
+        const toDelete = prev.created_at < u.created_at ? prev : u;
+        await deleteUser(toDelete.id);
+        gbUsersStore = gbUsersStore.filter(m => m.id !== toDelete.id);
+        seen.set(key, prev.created_at > u.created_at ? prev : u);
+        removed++;
+      } else {
+        seen.set(key, u);
+      }
+    }
+    console.log(`✅ [DEDUP] Removed ${removed} duplicate entries`);
+    res.json({ success: true, removed });
+  } catch (error) {
+    console.error('❌ [DEDUP] Error:', error);
+    res.status(500).json({ error: 'Dedup failed' });
   }
 });
 
