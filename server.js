@@ -1302,9 +1302,17 @@ io.on('connection', (socket) => {
   // GameBird V2 frontend sync — separate namespace to avoid schema conflicts
   // Store latest user list from any client so /api/users counter stays accurate
   socket.on('users:update', (incoming) => {
-    if (Array.isArray(incoming) && incoming.length > 0) {
-      gbUsersStore = incoming;
-    }
+    if (!Array.isArray(incoming) || incoming.length === 0) return;
+    gbUsersStore = incoming;
+    // Persist every non-admin user to DB so the list survives server restarts
+    incoming.forEach(u => {
+      if (!u.isAdmin && u.id && u.name) {
+        upsertUserFromSocket(u.id, u.name, false).catch(() => {});
+        // Sync membership status if premium
+        const isPremium = u.membership?.tier === 'premium' && !u.membership?.cancelledAt;
+        updateUserMembership(u.id, isPremium ? 'premium' : 'free').catch(() => {});
+      }
+    });
   });
 
   socket.on('gb:state', (data) => {
