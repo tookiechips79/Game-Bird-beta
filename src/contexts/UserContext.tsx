@@ -705,9 +705,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         merged[idx] = {
           ...merged[idx],
           credits: su.credits ?? merged[idx].credits,
-          membership: isPremium && !(merged[idx].membership?.tier === 'premium' && !merged[idx].membership?.cancelledAt)
-            ? premiumMembership
-            : merged[idx].membership,
+          // DB is authoritative for membership — always trust server status
+          membership: isPremium ? (merged[idx].membership?.tier === 'premium' && !merged[idx].membership?.cancelledAt ? merged[idx].membership : premiumMembership) : undefined,
         };
       }
     });
