@@ -321,7 +321,22 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                               {entry.amount > 0 ? `${entry.type === 'admin_deduct' ? '-' : '+'}${entry.amount}` : ''}
                             </span>
                           </div>
-                          <div className="mono text-xs" style={{ color: 'var(--text)' }}>{entry.description}</div>
+                          {/* TO / FROM labels */}
+                          {(entry.toUserName || entry.userName) && (entry.type === 'admin_add' || entry.type === 'admin_deduct' || entry.type === 'tip' || entry.type === 'reload') && (
+                            <div className="mono text-xs flex items-center gap-2">
+                              <span style={{ color: 'rgba(255,255,255,0.3)' }}>TO</span>
+                              <span style={{ color: 'var(--cyan)', fontWeight: 900 }}>{entry.toUserName ?? entry.userName}</span>
+                            </div>
+                          )}
+                          {(entry.fromUserName || entry.type === 'admin_add' || entry.type === 'admin_deduct' || entry.type === 'reload') && (
+                            <div className="mono text-xs flex items-center gap-2">
+                              <span style={{ color: 'rgba(255,255,255,0.3)' }}>BY</span>
+                              <span style={{ color: 'var(--gold)', fontWeight: 900 }}>{entry.fromUserName ?? 'Admin'}</span>
+                            </div>
+                          )}
+                          {entry.type === 'user_created' || entry.type === 'user_deleted' ? (
+                            <div className="mono text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{entry.userName}</div>
+                          ) : null}
                           <div className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                             {new Date(entry.timestamp).toLocaleString()}
                             {entry.balanceBefore !== undefined && entry.balanceAfter !== undefined && (
