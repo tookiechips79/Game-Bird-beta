@@ -357,13 +357,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // Build payout list from bookedBets
     const payouts: { userId: string; amount: number }[] = [];
+    const allAffectedIds = new Set<string>();
     for (const bb of g.bookedBets) {
       const winnerId = winningTeam === 'A' ? bb.userIdA : bb.userIdB;
       payouts.push({ userId: winnerId, amount: bb.amount * 2 });
+      allAffectedIds.add(bb.userIdA);
+      allAffectedIds.add(bb.userIdB);
     }
     // Refund unmatched bets
     for (const bet of allBets) {
-      if (!bet.booked) payouts.push({ userId: bet.userId, amount: bet.amount });
+      if (!bet.booked) { payouts.push({ userId: bet.userId, amount: bet.amount }); allAffectedIds.add(bet.userId); }
     }
 
     console.log('[SNAPSHOT] bookedBets:', JSON.stringify(g.bookedBets.map(bb => ({ userIdA: bb.userIdA, userNameA: bb.userNameA, userIdB: bb.userIdB, userNameB: bb.userNameB, amount: bb.amount }))));
@@ -401,7 +404,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return { userId, name: data.name, before, after, bets: data.bets };
     });
 
-    clearPendingBetsForGame(g.currentGameNumber, payouts);
+    clearPendingBetsForGame(g.currentGameNumber, payouts, allAffectedIds);
     recordGameSnapshot({
       id: `snap_${Date.now()}`,
       gameNumber: g.currentGameNumber,

@@ -25,7 +25,7 @@ interface UserContextType {
   refundBet: (userId: string, betId: string, amount: number) => void;
   recordTip: (fromId: string, toId: string, amount: number) => void;
   transferCredits: (fromId: string, toUsername: string, amount: number) => { success: boolean; error?: string };
-  clearPendingBetsForGame: (gameNumber: number, payouts: { userId: string; amount: number }[]) => void;
+  clearPendingBetsForGame: (gameNumber: number, payouts: { userId: string; amount: number }[], allAffectedIds?: Set<string>) => void;
   updateMembership: (userId: string, membership: Membership | null) => void;
   requestAllUsers: () => void;
   mergeServerUsers: (serverUsers: any[], deletedIds?: string[]) => void;
@@ -656,7 +656,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const clearPendingBetsForGame = (gameNumber: number, payouts: { userId: string; amount: number }[], winningTeam?: 'A' | 'B', matchedUserIds?: Set<string>) => {
+  const clearPendingBetsForGame = (gameNumber: number, payouts: { userId: string; amount: number }[], allAffectedIds?: Set<string>) => {
     const payoutMap: Record<string, number> = {};
     for (const p of payouts) {
       payoutMap[p.userId] = (payoutMap[p.userId] || 0) + p.amount;
@@ -675,23 +675,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return updated;
     };
 
-    // Capture all users who had pending bets for this game BEFORE clearing
-    const affectedIds = new Set(
+    // Use passed affectedIds (from bookedBets) so admin device always persists correctly
+    // even though admin's usersRef never called deductCredits locally
+    const affectedIds = allAffectedIds ?? new Set(
       usersRef.current
         .filter(u => (u.pendingBets || []).some(b => b.gameNumber === gameNumber))
         .map(u => u.id)
     );
-    console.log('[PAYOUT] payoutMap:', JSON.stringify(payoutMap));
-    console.log('[PAYOUT] affectedIds:', [...affectedIds]);
-    usersRef.current.forEach(u => {
-      if (affectedIds.has(u.id)) console.log(`[PAYOUT] ${u.name} credits BEFORE: ${u.credits}, payout: ${payoutMap[u.id] ?? 0}, pendingBets:`, u.pendingBets?.map(b => b.amount));
-    });
     const next = usersRef.current.map(update);
     usersRef.current = next;
     setUsersAndEmit(prev => prev.map(update));
-    next.forEach(u => {
-      if (affectedIds.has(u.id)) console.log(`[PAYOUT] ${u.name} credits AFTER: ${u.credits}`);
-    });
     // Persist ALL affected players (winners AND losers) so DB stays in sync
     next.forEach(u => { if (affectedIds.has(u.id)) persistBalance(u.id, u.credits); });
     checkDrift(`Game #${gameNumber} settled`, next);
