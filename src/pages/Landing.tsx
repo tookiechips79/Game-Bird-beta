@@ -89,6 +89,9 @@ function MemberCounter({ max }: { max: number }) {
       </div>
 
       {/* RSVP note */}
+      <div className="text-3xl font-black uppercase tracking-widest text-center" style={{ color: 'var(--cyan)', textShadow: '0 0 12px rgba(0,229,255,0.6)' }}>
+        RSVP
+      </div>
       <p className="text-sm leading-relaxed text-center" style={{ color: 'var(--text)', maxWidth: '36rem' }}>
         For our first match, GameBird will be accepting only <span style={{ color: 'var(--gold)', fontWeight: 700 }}>500 exclusive members</span>. Members who sign up will be guaranteed a seat for the opening match — your membership starts the date of the first match. This RSVP gets you a seat and full betting privileges, guaranteeing you full access to an exclusive event you won't want to miss.
       </p>
