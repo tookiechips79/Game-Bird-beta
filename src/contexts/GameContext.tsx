@@ -355,6 +355,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return bal;
     };
 
+    // Pre-compute startingBalance for every booked bet in queue order (same order
+    // the Whitebook uses) so both displays always show identical numbers.
+    const betStartBal = new Map<string, number>();
+    for (const b of [...g.teamAQueue, ...g.teamBQueue].filter(b => b.booked)) {
+      betStartBal.set(b.id, balanceBefore(b.userId, b.amount));
+    }
+
     // Build payout list from bookedBets
     const payouts: { userId: string; amount: number }[] = [];
     const allAffectedIds = new Set<string>();
@@ -380,8 +387,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!snapMap[bb.userIdB]) snapMap[bb.userIdB] = { name: bb.userNameB, matchedAmount: 0, bets: [] };
       snapMap[bb.userIdA].matchedAmount += bb.amount;
       snapMap[bb.userIdB].matchedAmount += bb.amount;
-      snapMap[bb.userIdA].bets.push({ opponentName: bb.userNameB, amount: bb.amount, won: aWon, startingBalance: balanceBefore(bb.userIdA, bb.amount) });
-      snapMap[bb.userIdB].bets.push({ opponentName: bb.userNameA, amount: bb.amount, won: !aWon, startingBalance: balanceBefore(bb.userIdB, bb.amount) });
+      snapMap[bb.userIdA].bets.push({ opponentName: bb.userNameB, amount: bb.amount, won: aWon, startingBalance: betStartBal.get(bb.betIdA) });
+      snapMap[bb.userIdB].bets.push({ opponentName: bb.userNameA, amount: bb.amount, won: !aWon, startingBalance: betStartBal.get(bb.betIdB) });
     }
 
     // Build payoutMap from matched bets only (winner gets 2x per booked bet)
@@ -430,7 +437,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         amount: b.amount,
         won: (winningTeam === 'A' && b.teamSide === 'A') || (winningTeam === 'B' && b.teamSide === 'B'),
         booked: true,
-        startingBalance: balanceBefore(b.userId, b.amount),
+        startingBalance: betStartBal.get(b.id),
       }));
 
     const record: GameRecord = {
