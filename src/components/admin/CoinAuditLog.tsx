@@ -22,6 +22,23 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
 
   const unacked = coinAuditLog.filter(e => !e.acknowledged).length;
 
+  // Per-game drift summary derived from gameHistory (same source as Whitebook)
+  const gameDriftRows = gameHistory.map(record => {
+    const playerMap: Record<string, { before: number; after: number }> = {};
+    record.bets.teamA.forEach((b, i) => {
+      if (!playerMap[b.userId]) playerMap[b.userId] = { before: b.startingBalance ?? 0, after: b.startingBalance ?? 0 };
+      playerMap[b.userId].after += b.won ? b.amount : -b.amount;
+    });
+    record.bets.teamB.forEach((b, i) => {
+      if (!playerMap[b.userId]) playerMap[b.userId] = { before: b.startingBalance ?? 0, after: b.startingBalance ?? 0 };
+      playerMap[b.userId].after += b.won ? b.amount : -b.amount;
+    });
+    const totalBefore = Object.values(playerMap).reduce((s, p) => s + p.before, 0);
+    const totalAfter  = Object.values(playerMap).reduce((s, p) => s + p.after,  0);
+    return { record, totalBefore, totalAfter, drift: totalAfter - totalBefore };
+  });
+  const driftAlerts = gameDriftRows.filter(r => r.drift !== 0).length;
+
   const tabStyle = (t: Tab) => ({
     flex: 1,
     padding: '8px 0',
@@ -65,7 +82,7 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
             ACTIVITY ({adminAuditLog.length})
           </button>
           <button style={tabStyle('drift')} onClick={() => setTab('drift')}>
-            DRIFT {unacked > 0 ? `⚠ (${unacked})` : `(${coinAuditLog.length})`}
+            DRIFT {driftAlerts > 0 ? `⚠ (${driftAlerts})` : `(${gameHistory.length})`}
           </button>
         </div>
 
@@ -268,53 +285,37 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
           {/* ── Drift Alerts ── */}
           {tab === 'drift' && (
             <>
-              {coinAuditLog.length === 0 ? (
+              {gameDriftRows.length === 0 ? (
                 <div className="flex items-center justify-center h-32 mono text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  NO DISCREPANCIES RECORDED
+                  NO GAMES RECORDED YET
                 </div>
               ) : (
                 <div className="flex flex-col divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                  {coinAuditLog.map(entry => (
+                  {gameDriftRows.map(({ record, totalBefore, totalAfter, drift }) => (
                     <div
-                      key={entry.id}
-                      className="flex items-start gap-4 px-5 py-3"
-                      style={{ background: entry.acknowledged ? 'transparent' : 'rgba(255,0,64,0.04)' }}
+                      key={record.id}
+                      className="flex items-center justify-between px-5 py-3"
+                      style={{ background: drift !== 0 ? 'rgba(255,0,64,0.04)' : 'transparent' }}
                     >
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="mono text-sm font-black" style={{ color: entry.drift > 0 ? 'var(--gold)' : 'var(--red)' }}>
-                            {entry.drift > 0 ? '+' : ''}{entry.drift} COIN DRIFT
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="mono text-xs font-black" style={{ color: record.winningTeam === 'A' ? 'var(--cyan)' : 'var(--red)' }}>
+                            GAME #{record.gameNumber}
                           </span>
-                          {!entry.acknowledged && (
-                            <span className="mono text-xs px-1.5 py-0.5" style={{ background: 'rgba(255,0,64,0.15)', color: 'var(--red)', border: '1px solid rgba(255,0,64,0.3)' }}>NEW</span>
-                          )}
-                        </div>
-                        <div className="mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                          {new Date(entry.timestamp).toLocaleString()} · {entry.trigger}
+                          <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                            {new Date(record.timestamp).toLocaleString()}
+                          </span>
                         </div>
                         <div className="mono text-xs flex gap-4 mt-0.5">
-                          <span>Expected: <span style={{ color: 'var(--cyan)' }}>{entry.expected.toLocaleString()}</span></span>
-                          <span>Actual: <span style={{ color: entry.drift !== 0 ? 'var(--red)' : 'var(--green)' }}>{entry.actual.toLocaleString()}</span></span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)' }}>BEFORE <span style={{ color: 'var(--text)' }}>{totalBefore.toLocaleString()}</span></span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)' }}>AFTER <span style={{ color: 'var(--text)' }}>{totalAfter.toLocaleString()}</span></span>
                         </div>
                       </div>
-                      {!entry.acknowledged && (
-                        <button className="btn btn-ghost px-2 py-1 text-xs flex-shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} onClick={() => acknowledgeAudit(entry.id)}>
-                          ACK
-                        </button>
-                      )}
+                      <span className="mono text-sm font-black" style={{ color: drift === 0 ? 'var(--green)' : 'var(--red)' }}>
+                        {drift === 0 ? '✓ CLEAN' : `⚠ ${drift > 0 ? '+' : ''}${drift}`}
+                      </span>
                     </div>
                   ))}
-                </div>
-              )}
-              {coinAuditLog.length > 0 && (
-                <div className="flex justify-end px-5 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                  <button
-                    className="btn btn-ghost px-3 py-1 text-xs"
-                    style={{ color: 'rgba(255,255,255,0.3)' }}
-                    onClick={() => { if (confirm('Clear entire audit log?')) clearAuditLog(); }}
-                  >
-                    CLEAR LOG
-                  </button>
                 </div>
               )}
             </>
