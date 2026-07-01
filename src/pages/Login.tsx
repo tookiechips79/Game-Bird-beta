@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
 import { useGame } from '@/contexts/GameContext';
+import type { User } from '@/types';
 
 type Tab = 'login' | 'signup';
 
@@ -52,7 +53,7 @@ function PinPad({ value, onChange }: { value: string; onChange: (v: string) => v
 }
 
 export default function Login() {
-  const { users, addUser, setCurrentUser, setPin } = useUser();
+  const { users, addUser, setCurrentUser, setPin, claimUserSession } = useUser();
   const { claimAdmin } = useGame();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('login');
@@ -97,7 +98,10 @@ export default function Login() {
 
   const nonAdminUsers = users.filter(u => !u.isAdmin);
 
-  const handleLogin = () => {
+  const [showUserForceConfirm, setShowUserForceConfirm] = useState(false);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+
+  const handleLogin = async () => {
     setLoginError('');
     const user = nonAdminUsers.find(u => u.name.toLowerCase() === loginName.toLowerCase());
     if (!user) { setLoginError('Account not found.'); return; }
@@ -106,8 +110,29 @@ export default function Login() {
     if (!user.pin && loginPin.length === 4) {
       setPin(user.id, loginPin);
     }
-    setCurrentUser(user);
-    navigate('/');
+    const res = await claimUserSession(user.id);
+    if (res.success) {
+      setCurrentUser(user);
+      navigate('/');
+    } else if (res.alreadyActive) {
+      setPendingUser(user);
+      setShowUserForceConfirm(true);
+    } else {
+      setLoginError(res.error || 'Login failed — try again.');
+    }
+  };
+
+  const confirmUserForceTakeover = async () => {
+    if (!pendingUser) return;
+    setShowUserForceConfirm(false);
+    const res = await claimUserSession(pendingUser.id, true);
+    if (res.success) {
+      setCurrentUser(pendingUser);
+      navigate('/');
+    } else {
+      setLoginError(res.error || 'Login failed — try again.');
+    }
+    setPendingUser(null);
   };
 
   const handleSignup = () => {
@@ -342,6 +367,22 @@ export default function Login() {
             <div className="flex gap-2">
               <button className="btn btn-ghost flex-1 py-2 text-xs" onClick={() => { setShowForceConfirm(false); setAdminPw(''); }}>CANCEL</button>
               <button className="btn flex-1 py-2 text-xs font-black" style={{ background: 'var(--red)', color: '#000' }} onClick={confirmForceTakeover}>TAKE OVER</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Force-takeover confirmation — this account already active elsewhere */}
+      {showUserForceConfirm && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
+          <div className="flex flex-col gap-4 p-6 w-80" style={{ background: '#0a0a18', border: '1px solid rgba(255,0,64,0.4)', borderRadius: 4 }}>
+            <span className="mono text-sm font-black tracking-widest" style={{ color: 'var(--red)' }}>⚠ ACCOUNT ALREADY ACTIVE</span>
+            <span className="mono text-xs" style={{ color: 'var(--text)' }}>
+              This account is currently logged in on another device. Continuing will immediately log that device out.
+            </span>
+            <div className="flex gap-2">
+              <button className="btn btn-ghost flex-1 py-2 text-xs" onClick={() => { setShowUserForceConfirm(false); setPendingUser(null); }}>CANCEL</button>
+              <button className="btn flex-1 py-2 text-xs font-black" style={{ background: 'var(--red)', color: '#000' }} onClick={confirmUserForceTakeover}>TAKE OVER</button>
             </div>
           </div>
         </div>

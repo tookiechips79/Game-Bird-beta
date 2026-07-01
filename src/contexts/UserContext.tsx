@@ -15,6 +15,9 @@ interface UserContextType {
   currentUser: User | null;
   currentUserId: string | null;
   setCurrentUser: (user: User | null) => void;
+  claimUserSession: (userId: string, force?: boolean) => Promise<{ success: boolean; error?: string; alreadyActive?: boolean }>;
+  userKickedMessage: string | null;
+  clearUserKickedMessage: () => void;
   addUser: (name: string, isAdmin?: boolean, initialCredits?: number, pin?: string, referredBy?: string) => User;
   setPin: (userId: string, pin: string) => void;
   renameUser: (userId: string, name: string) => void;
@@ -169,6 +172,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch { return null; }
   });
   const serverDeletedIdsRef = useRef<Set<string>>(new Set());
+  const [userKickedMessage, setUserKickedMessage] = useState<string | null>(null);
+  const clearUserKickedMessage = () => setUserKickedMessage(null);
   const [coinAuditLog, setCoinAuditLog] = useState<CoinAuditEntry[]>(loadAuditLog);
   const [gameSnapshots, setGameSnapshots] = useState<GameBalanceSnapshot[]>(loadSnapshots);
   const snapshotsRef = useRef(gameSnapshots);
@@ -482,6 +487,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (currentUserId === userId) setCurrentUserId(null);
     });
 
+    // Single-session enforcement — this account was claimed by another device
+    socket.on('user:kicked', ({ userId, reason }: { userId: string; reason?: string }) => {
+      const myId = localStorage.getItem('gb_current_user_id');
+      if (myId !== userId) return;
+      setCurrentUserId(null);
+      try { sessionStorage.removeItem('gb_session_active'); } catch {}
+      setUserKickedMessage(reason || 'Logged out — this account was opened on another device.');
+    });
+
     socket.on('challenge:new', (challenge: Challenge) => {
       if (!challengesRef.current.find(c => c.id === challenge.id)) {
         updateChallenges([challenge, ...challengesRef.current]);
@@ -552,6 +566,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const setCurrentUser = (user: User | null) => {
+    const prevUserId = currentUserId;
     setCurrentUserId(user?.id ?? null);
     if (user) {
       try { sessionStorage.setItem('gb_session_active', '1'); } catch {}
@@ -562,7 +577,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setTimeout(fetchAndMergeFromServer, 500);
     } else {
       try { sessionStorage.removeItem('gb_session_active'); } catch {}
+      if (prevUserId) socketRef.current?.emit('user:release', { userId: prevUserId });
     }
+  };
+
+  // Claims exclusive login session for this account. If another device already holds
+  // it, the server refuses (alreadyActive) rather than silently booting it — the caller
+  // must retry with force:true to confirm a deliberate takeover, mirroring admin claims.
+  const claimUserSession = (userId: string, force = false): Promise<{ success: boolean; error?: string; alreadyActive?: boolean }> => {
+    return new Promise((resolve) => {
+      const socket = socketRef.current;
+      if (!socket || !socket.connected) { resolve({ success: false, error: 'Not connected to server.' }); return; }
+      let settled = false;
+      const handler = (res: { success: boolean; error?: string; alreadyActive?: boolean }) => {
+        if (settled) return;
+        settled = true;
+        socket.off('user:claim:result', handler);
+        resolve(res);
+      };
+      socket.on('user:claim:result', handler);
+      socket.emit('user:claim', { userId, force });
+      setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        socket.off('user:claim:result', handler);
+        resolve({ success: false, error: 'Server did not respond — try again.' });
+      }, 5000);
+    });
   };
 
   const getUserById = (id: string) => usersRef.current.find(u => u.id === id);
@@ -874,17 +915,31 @@ usersRef.current = merged;
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [currentUserId]);
 
-  // Refresh on socket reconnect
+  // Refresh on socket reconnect — also re-claim this account's session slot (every
+  // reconnect gets a new socket.id, so the server's activeUserSocket entry would
+  // otherwise go stale and silently stop enforcing single-session for this account).
+  // Non-forcing: if another device legitimately took over while we were disconnected,
+  // we log out instead of fighting it for control.
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
-    const onReconnect = () => { if (currentUserId) fetchAndMergeFromServer(); };
+    const onReconnect = () => {
+      if (!currentUserId) return;
+      fetchAndMergeFromServer();
+      claimUserSession(currentUserId, false).then(res => {
+        if (!res.success && res.alreadyActive) {
+          setCurrentUserId(null);
+          try { sessionStorage.removeItem('gb_session_active'); } catch {}
+          setUserKickedMessage('This account is now active on another device.');
+        }
+      });
+    };
     socket.on('connect', onReconnect);
     return () => { socket.off('connect', onReconnect); };
   }, [currentUserId]);
 
   return (
-    <UserContext.Provider value={{ users, currentUser, currentUserId, setCurrentUser, addUser, setPin, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, playerSnaps, recordPlayerSnap, clearPlayerSnaps, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers, mergeServerUsers }}>
+    <UserContext.Provider value={{ users, currentUser, currentUserId, setCurrentUser, claimUserSession, userKickedMessage, clearUserKickedMessage, addUser, setPin, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, playerSnaps, recordPlayerSnap, clearPlayerSnaps, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers, mergeServerUsers }}>
       {children}
     </UserContext.Provider>
 

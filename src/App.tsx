@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -9,7 +9,29 @@ function ScrollToTop() {
   }, [pathname]);
   return null;
 }
-import { UserProvider } from '@/contexts/UserContext';
+
+// Global — this account's session was taken over from another device. Can fire on
+// any route, not just Login, so it lives at the app shell level.
+function UserKickedNotice() {
+  const { userKickedMessage, clearUserKickedMessage } = useUser();
+  const navigate = useNavigate();
+  if (!userKickedMessage) return null;
+  return (
+    <div className="fixed inset-0 z-[600] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
+      <div className="flex flex-col gap-4 p-6" style={{ background: '#0a0a18', border: '1px solid rgba(255,0,64,0.4)', borderRadius: 4, maxWidth: 340 }}>
+        <span className="mono text-sm font-black tracking-widest" style={{ color: 'var(--red)' }}>⚠ SESSION ENDED</span>
+        <span className="mono text-xs" style={{ color: 'var(--text)' }}>{userKickedMessage}</span>
+        <button
+          className="btn btn-gold py-2 text-xs font-black tracking-widest"
+          onClick={() => { clearUserKickedMessage(); navigate('/login'); }}
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
+import { UserProvider, useUser } from '@/contexts/UserContext';
 import { GameProvider } from '@/contexts/GameContext';
 import Landing from '@/pages/Landing';
 import Arena from '@/pages/Arena';
@@ -35,6 +57,7 @@ export default function App() {
       <HashRouter>
         <GameProvider>
           <ScrollToTop />
+          <UserKickedNotice />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />

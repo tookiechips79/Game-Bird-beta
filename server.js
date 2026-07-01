@@ -309,6 +309,11 @@ let serverGameState = getGameState('default');
 // Track connected users and their credits
 let connectedUsers = new Map(); // socketId -> { userId, credits, name }
 
+// Single-session-per-account enforcement (mirrors admin session logic below).
+// Last successful login wins and kicks any other active socket for that userId,
+// but only after the requester explicitly confirms a force takeover.
+const activeUserSocket = new Map(); // userId -> socket.id
+
 // Flag to pause broadcasting during clear operations
 let isListenersPaused = false;
 
@@ -1293,6 +1298,31 @@ io.on('connection', (socket) => {
     for (const [arenaId, sid] of adminSessionByArena.entries()) {
       if (sid === socket.id) adminSessionByArena.delete(arenaId);
     }
+    for (const [userId, sid] of activeUserSocket.entries()) {
+      if (sid === socket.id) activeUserSocket.delete(userId);
+    }
+  });
+
+  // Claim exclusive session for a regular user account. Mirrors admin:claim — a login
+  // that finds the account already active elsewhere is refused (alreadyActive), and only
+  // takes over (kicking the other device) once the requester explicitly confirms with force:true.
+  socket.on('user:claim', ({ userId, force = false } = {}) => {
+    if (!userId) { socket.emit('user:claim:result', { success: false, error: 'Missing userId' }); return; }
+    const existing = activeUserSocket.get(userId);
+    if (existing && existing !== socket.id) {
+      if (!force) {
+        socket.emit('user:claim:result', { success: false, error: 'This account is already logged in on another device.', alreadyActive: true });
+        return;
+      }
+      io.to(existing).emit('user:kicked', { userId, reason: 'Your session was taken over from another device.' });
+    }
+    activeUserSocket.set(userId, socket.id);
+    socket.emit('user:claim:result', { success: true });
+    console.log(`🔐 [SESSION] Socket ${socket.id} claimed account ${userId}${existing ? ' (forced takeover)' : ''}`);
+  });
+
+  socket.on('user:release', ({ userId } = {}) => {
+    if (userId && activeUserSocket.get(userId) === socket.id) activeUserSocket.delete(userId);
   });
 
   // Claim exclusive admin session for this arena. If another socket already holds it,
