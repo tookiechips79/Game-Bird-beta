@@ -681,9 +681,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .filter(u => (u.pendingBets || []).some(b => b.gameNumber === gameNumber))
         .map(u => u.id)
     );
+    console.log('[PAYOUT] payoutMap:', JSON.stringify(payoutMap));
+    console.log('[PAYOUT] affectedIds:', [...affectedIds]);
+    usersRef.current.forEach(u => {
+      if (affectedIds.has(u.id)) console.log(`[PAYOUT] ${u.name} credits BEFORE: ${u.credits}, payout: ${payoutMap[u.id] ?? 0}, pendingBets:`, u.pendingBets?.map(b => b.amount));
+    });
     const next = usersRef.current.map(update);
     usersRef.current = next;
     setUsersAndEmit(prev => prev.map(update));
+    next.forEach(u => {
+      if (affectedIds.has(u.id)) console.log(`[PAYOUT] ${u.name} credits AFTER: ${u.credits}`);
+    });
     // Persist ALL affected players (winners AND losers) so DB stays in sync
     next.forEach(u => { if (affectedIds.has(u.id)) persistBalance(u.id, u.credits); });
     checkDrift(`Game #${gameNumber} settled`, next);
