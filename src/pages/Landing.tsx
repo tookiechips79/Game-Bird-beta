@@ -28,6 +28,9 @@ function MemberCounter({ max }: { max: number }) {
   return (
     <div className="hud-panel bracket px-6 py-5 flex flex-col items-center gap-4"
       style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+      <div className="text-3xl font-black uppercase tracking-widest text-center" style={{ color: 'var(--cyan)', textShadow: '0 0 12px rgba(0,229,255,0.6)' }}>
+        RSVP
+      </div>
       <span className="mono text-xs font-black tracking-[0.3em] uppercase" style={{ color: 'var(--gold)' }}>
         Exclusive Access
       </span>
@@ -75,23 +78,21 @@ function MemberCounter({ max }: { max: number }) {
         </text>
       </svg>
 
-      {/* Left / Right counters */}
-      <div className="flex items-center justify-between w-full">
-        <div className="flex flex-col items-center gap-0.5">
+      {/* Left / Right counters — grid guarantees the divider sits at the true center
+          regardless of how wide the numbers on each side are */}
+      <div className="grid items-center w-full" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+        <div className="flex flex-col items-center gap-0.5 justify-self-center">
           <span className="mono font-black leading-none" style={{ fontSize: '2.2rem', color: 'var(--cyan)', textShadow: '0 0 12px rgba(0,229,255,0.6)' }}>{current}</span>
           <span className="mono text-xs tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Members</span>
         </div>
-        <div className="w-px h-12" style={{ background: 'var(--border)' }} />
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="w-px h-12 justify-self-center" style={{ background: 'var(--border)' }} />
+        <div className="flex flex-col items-center gap-0.5 justify-self-center">
           <span className="mono font-black leading-none" style={{ fontSize: '2.2rem', color: 'var(--gold)', textShadow: '0 0 12px rgba(255,215,0,0.5)' }}>{max}</span>
           <span className="mono text-xs tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Max Capacity</span>
         </div>
       </div>
 
       {/* RSVP note */}
-      <div className="text-3xl font-black uppercase tracking-widest text-center" style={{ color: 'var(--cyan)', textShadow: '0 0 12px rgba(0,229,255,0.6)' }}>
-        RSVP
-      </div>
       <p className="text-sm leading-relaxed text-center" style={{ color: 'var(--text)', maxWidth: '36rem' }}>
         For our first match, GameBird will be accepting only <span style={{ color: 'var(--gold)', fontWeight: 700 }}>500 exclusive members</span>. Members who sign up will be guaranteed a seat for the opening match — your membership starts the date of the first match. This RSVP gets you a seat and full betting privileges, guaranteeing you full access to an exclusive event you won't want to miss.
       </p>
