@@ -162,7 +162,7 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                                         </div>
                                         {b.startingBalance != null && (
                                           <div className="mono text-xs ml-4" style={{ color: 'rgba(0,229,255,0.35)' }}>
-                                            bal before: {b.startingBalance}
+                                            bal before: {b.startingBalance + b.amount}
                                           </div>
                                         )}
                                       </div>
