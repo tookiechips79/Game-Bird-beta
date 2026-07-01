@@ -290,6 +290,12 @@ let arenaGameStates = {
 // Track which arena each socket belongs to
 const socketArenaMap = new Map();
 
+// Single-admin-session enforcement, per arena — last successful login wins and kicks
+// any previously active admin socket, preventing two admins from taking conflicting
+// actions (e.g. two declareWinner calls) on the same arena at once.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '1980';
+const adminSessionByArena = new Map(); // arenaId -> socket.id
+
 const getGameState = (arenaId = 'default') => {
   if (!arenaGameStates[arenaId]) {
     console.log(`🆕 Creating new arena state for: ${arenaId}`);
@@ -1284,6 +1290,29 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`🔌 [DISCONNECT] Socket disconnected: ${socket.id}`);
     socketArenaMap.delete(socket.id);
+    for (const [arenaId, sid] of adminSessionByArena.entries()) {
+      if (sid === socket.id) adminSessionByArena.delete(arenaId);
+    }
+  });
+
+  // Claim exclusive admin session for this arena. If another socket is already the
+  // active admin, kick it (client shows a "logged out — admin opened elsewhere" message).
+  socket.on('admin:claim', ({ password, arenaId = 'default' } = {}) => {
+    if (password !== ADMIN_PASSWORD) {
+      socket.emit('admin:claim:result', { success: false, error: 'Incorrect password' });
+      return;
+    }
+    const existing = adminSessionByArena.get(arenaId);
+    if (existing && existing !== socket.id) {
+      io.to(existing).emit('admin:kicked', { reason: 'Another device logged in as admin' });
+    }
+    adminSessionByArena.set(arenaId, socket.id);
+    socket.emit('admin:claim:result', { success: true });
+    console.log(`👑 [ADMIN] Socket ${socket.id} claimed admin for arena '${arenaId}'`);
+  });
+
+  socket.on('admin:release', ({ arenaId = 'default' } = {}) => {
+    if (adminSessionByArena.get(arenaId) === socket.id) adminSessionByArena.delete(arenaId);
   });
 
   // Handle game state requests from new clients

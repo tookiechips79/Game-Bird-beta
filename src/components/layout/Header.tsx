@@ -4,8 +4,6 @@ import { useGame } from '@/contexts/GameContext';
 import { useUser } from '@/contexts/UserContext';
 import UserBar from './UserBar';
 
-const ADMIN_PASSWORD = '1980';
-
 const NAV_LINKS = [
   { to: '/arena', label: 'ARENA' },
   { to: '/postbox', label: 'POSTBOX' },
@@ -16,7 +14,7 @@ const NAV_LINKS = [
 ];
 
 export default function Header() {
-  const { isAdmin, setIsAdmin } = useGame();
+  const { isAdmin, claimAdmin } = useGame();
   const { users, currentUser, challenges } = useUser();
   const pendingChallenges = challenges.filter(c => c.opponentId === currentUser?.id && c.status === 'pending').length;
   const loc = useLocation();
@@ -35,10 +33,10 @@ export default function Header() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const submitPassword = () => {
-    if (pw === ADMIN_PASSWORD) {
+  const submitPassword = async () => {
+    const res = await claimAdmin(pw);
+    if (res.success) {
       setShowPwPrompt(false);
-      setIsAdmin(true);
       navigate('/admin');
     } else {
       setPwError(true);

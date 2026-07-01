@@ -53,7 +53,7 @@ function PinPad({ value, onChange }: { value: string; onChange: (v: string) => v
 
 export default function Login() {
   const { users, addUser, setCurrentUser, setPin } = useUser();
-  const { setIsAdmin } = useGame();
+  const { claimAdmin } = useGame();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('login');
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
@@ -61,9 +61,9 @@ export default function Login() {
   const [adminPwError, setAdminPwError] = useState(false);
   const adminInputRef = useRef<HTMLInputElement>(null);
 
-  const submitAdminPw = () => {
-    if (adminPw === '1980') {
-      setIsAdmin(true);
+  const submitAdminPw = async () => {
+    const res = await claimAdmin(adminPw);
+    if (res.success) {
       navigate('/admin');
     } else {
       setAdminPwError(true);
