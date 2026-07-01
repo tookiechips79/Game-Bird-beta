@@ -716,6 +716,45 @@ app.post('/api/credits/:userId/cashout', async (req, res) => {
   }
 });
 
+// P2P transfer — deducts from sender, credits receiver, records proper tx for both
+app.post('/api/transfer', async (req, res) => {
+  try {
+    const { fromId, toId, amount, fromName, toName } = req.body;
+    if (!fromId || !toId || !amount || amount <= 0) return res.status(400).json({ error: 'Invalid transfer params' });
+    if (fromId === toId) return res.status(400).json({ error: 'Cannot transfer to yourself' });
+
+    const fromBal = await getUserBalance(fromId);
+    if (fromBal < amount) return res.status(400).json({ error: 'Insufficient coins' });
+
+    const senderLabel = fromName || fromId;
+    const receiverLabel = toName || toId;
+
+    const txSent = await addTransaction(fromId, 'transfer_sent', -amount, `P2P transfer to ${receiverLabel}`);
+    const txReceived = await addTransaction(toId, 'transfer_received', amount, `P2P transfer from ${senderLabel}`);
+
+    if (!txSent || !txReceived) return res.status(500).json({ error: 'Transaction write failed' });
+
+    const newFromBal = await getUserBalance(fromId);
+    const newToBal = await getUserBalance(toId);
+
+    // Notify all clients to re-sync balances
+    io.emit('users:push');
+    // Push the receipt directly to any connected socket for sender/receiver
+    io.emit('transfer:receipt', {
+      fromId, toId, amount,
+      fromName: senderLabel, toName: receiverLabel,
+      timestamp: Date.now(),
+      txSent, txReceived,
+    });
+
+    console.log(`✅ [TRANSFER] ${senderLabel} → ${toName} : ${amount} coins  (from=${newFromBal} to=${newToBal})`);
+    res.json({ success: true, newFromBal, newToBal, txSent, txReceived });
+  } catch (error) {
+    console.error('❌ [TRANSFER]', error);
+    res.status(500).json({ error: 'Transfer failed' });
+  }
+});
+
 // Get all user credits (admin view)
 app.get('/api/credits-admin/all', (req, res) => {
   const allUsers = Object.entries(creditLedger).map(([userId, data]) => ({

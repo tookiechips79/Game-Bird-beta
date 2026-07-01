@@ -132,7 +132,7 @@ const typeLabel: Record<string, string> = {
   bet_placed: 'BET', bet_refund: 'REFUND', bet_win: 'WIN', bet_loss: 'LOSS',
   tip_given: 'TIP OUT', tip_received: 'TIP IN', admin_add: 'RELOAD', admin_deduct: 'DEDUCT',
   cashout: 'CASHOUT', membership_activate: 'MEMBER', membership_renew: 'RENEWED', membership_cancel: 'CANCELLED',
-  transfer_sent: 'SENT', transfer_received: 'RECEIVED',
+  transfer_sent: 'P2P SENT', transfer_received: 'P2P RECEIVED',
   challenge_escrow: 'ESCROW', challenge_win: 'WIN', challenge_refund: 'REFUND',
 };
 const txSign: Record<string, string> = {

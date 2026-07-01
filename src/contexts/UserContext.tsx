@@ -447,11 +447,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
 
     socket.on('challenge:decided', ({ challengeId, winnerId, winnerName }: { challengeId: string; winnerId: string; loserId: string; winnerName: string; amount: number }) => {
-      // Use the ref so we always have the latest challenges list
       const ch = challengesRef.current.find(c => c.id === challengeId);
       if (ch && ch.status !== 'judged') {
         payoutChallenge(challengeId, winnerId, winnerName);
       }
+    });
+
+    // Real-time receipt delivery for the receiving end of a P2P transfer
+    socket.on('transfer:receipt', ({ fromId, toId, amount, fromName, toName, timestamp }: {
+      fromId: string; toId: string; amount: number; fromName: string; toName: string; timestamp: number;
+    }) => {
+      const myId = usersRef.current.find(u => u.id === currentUserId)?.id ?? localStorage.getItem('gb_current_user_id');
+      if (myId !== toId && myId !== fromId) return;
+      const txType = myId === toId ? 'transfer_received' : 'transfer_sent';
+      const desc   = myId === toId ? `P2P transfer from ${fromName}` : `P2P transfer to ${toName}`;
+      const tx: import('@/types').Transaction = { id: `tx_${timestamp}_${txType}`, type: txType, amount, description: desc, timestamp };
+      usersRef.current = usersRef.current.map(u =>
+        u.id === myId ? appendTx(u, tx) : u
+      );
+      setUsers(prev => prev.map(u => u.id === myId ? appendTx(u, tx) : u));
     });
 
     return () => { socket.disconnect(); };
@@ -663,20 +677,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (to.id === fromId) return { success: false, error: 'Cannot transfer to yourself.' };
     if (amount <= 0 || !Number.isInteger(amount)) return { success: false, error: 'Amount must be a positive whole number.' };
     if (from.credits < amount) return { success: false, error: 'Insufficient coins.' };
-    const txSent = makeTx('transfer_sent', amount, `P2P transfer to ${to.name}`);
-    const txReceived = makeTx('transfer_received', amount, `P2P transfer from ${from.name}`);
+
+    // Optimistic local update so the UI responds instantly
+    const txSent     = makeTx('transfer_sent',     amount, `P2P transfer to ${to.name}`);
+    const txReceived = makeTx('transfer_received',  amount, `P2P transfer from ${from.name}`);
     usersRef.current = usersRef.current.map(u => {
       if (u.id === fromId) return appendTx({ ...u, credits: u.credits - amount }, txSent);
-      if (u.id === to.id) return appendTx({ ...u, credits: u.credits + amount }, txReceived);
+      if (u.id === to.id)  return appendTx({ ...u, credits: u.credits + amount }, txReceived);
       return u;
     });
     setUsersAndEmit(prev => prev.map(u => {
       if (u.id === fromId) return appendTx({ ...u, credits: u.credits - amount }, txSent);
-      if (u.id === to.id) return appendTx({ ...u, credits: u.credits + amount }, txReceived);
+      if (u.id === to.id)  return appendTx({ ...u, credits: u.credits + amount }, txReceived);
       return u;
     }));
-    persistBalance(fromId, from.credits - amount);
-    persistBalance(to.id, to.credits + amount);
+
+    // Persist to DB via dedicated transfer endpoint — records proper tx labels for both users
+    // and broadcasts transfer:receipt so the receiver's device gets the record in real-time
+    fetch(`${SERVER_URL}/api/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromId, toId: to.id, amount, fromName: from.name, toName: to.name }),
+    }).catch(() => {});
+
     logAdminEvent('transfer', {
       description: `P2P transfer: ${from.name} → ${to.name} (${amount} coins)`,
       amount, fromUserName: from.name, toUserName: to.name,
