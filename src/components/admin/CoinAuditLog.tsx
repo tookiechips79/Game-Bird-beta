@@ -15,8 +15,8 @@ const EVENT_LABELS: Record<AdminAuditEventType, { label: string; color: string }
 };
 
 export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
-  const { coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, adminAuditLog, clearAdminAudit } = useUser();
-  const { game } = useGame();
+  const { coinAuditLog, acknowledgeAudit, clearAuditLog, adminAuditLog, clearAdminAudit } = useUser();
+  const { game, gameHistory, clearHistory } = useGame();
   const [tab, setTab] = useState<Tab>('snapshots');
   const [expandedSnap, setExpandedSnap] = useState<string | null>(null);
 
@@ -59,7 +59,7 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
         {/* Tabs */}
         <div className="flex border-b" style={{ borderColor: 'rgba(255,215,0,0.1)', flexShrink: 0 }}>
           <button style={tabStyle('snapshots')} onClick={() => setTab('snapshots')}>
-            GAME BALANCES ({gameSnapshots.length})
+            GAME BALANCES ({gameHistory.length})
           </button>
           <button style={tabStyle('activity')} onClick={() => setTab('activity')}>
             ACTIVITY ({adminAuditLog.length})
@@ -72,53 +72,69 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* ── Game Balance Snapshots ── */}
+          {/* ── Game Balances (from Whitebook history) ── */}
           {tab === 'snapshots' && (
             <>
-              {gameSnapshots.length === 0 ? (
+              {gameHistory.length === 0 ? (
                 <div className="flex items-center justify-center h-32 mono text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
                   NO GAMES RECORDED YET
                 </div>
               ) : (
                 <div className="flex flex-col divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                  {gameSnapshots.map(snap => {
-                    const isOpen = expandedSnap === snap.id;
-                    const change = snap.totalAfter - snap.totalBefore;
-                    const winnerName = snap.winningTeam === 'A' ? game.teamAName : game.teamBName;
+                  {gameHistory.map(record => {
+                    const isOpen = expandedSnap === record.id;
+                    const winnerName = record.winningTeam === 'A' ? record.teamAName : record.teamBName;
+
+                    // Build per-player view from GameRecord bets (same data as Whitebook)
+                    const playerMap: Record<string, { name: string; bets: { opponentName: string; amount: number; won: boolean; startingBalance?: number }[] }> = {};
+                    record.bets.teamA.forEach((b, i) => {
+                      if (!playerMap[b.userId]) playerMap[b.userId] = { name: b.userName, bets: [] };
+                      playerMap[b.userId].bets.push({ opponentName: record.bets.teamB[i]?.userName ?? '?', amount: b.amount, won: b.won, startingBalance: b.startingBalance });
+                    });
+                    record.bets.teamB.forEach((b, i) => {
+                      if (!playerMap[b.userId]) playerMap[b.userId] = { name: b.userName, bets: [] };
+                      playerMap[b.userId].bets.push({ opponentName: record.bets.teamA[i]?.userName ?? '?', amount: b.amount, won: b.won, startingBalance: b.startingBalance });
+                    });
+                    const players = Object.entries(playerMap).map(([userId, data]) => {
+                      const before = data.bets[0]?.startingBalance ?? 0;
+                      const net = data.bets.reduce((s, b) => s + (b.won ? b.amount : -b.amount), 0);
+                      return { userId, name: data.name, before, after: before + net, bets: data.bets };
+                    });
+                    const totalBefore = players.reduce((s, p) => s + p.before, 0);
+                    const totalAfter = players.reduce((s, p) => s + p.after, 0);
+                    const change = totalAfter - totalBefore;
+
                     return (
-                      <div key={snap.id}>
+                      <div key={record.id}>
                         <button
                           className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-black transition-colors"
-                          onClick={() => setExpandedSnap(isOpen ? null : snap.id)}
+                          onClick={() => setExpandedSnap(isOpen ? null : record.id)}
                         >
                           <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
-                              <span className="mono text-xs font-black" style={{ color: snap.winningTeam === 'A' ? 'var(--cyan)' : 'var(--red)' }}>
-                                GAME #{snap.gameNumber}
+                              <span className="mono text-xs font-black" style={{ color: record.winningTeam === 'A' ? 'var(--cyan)' : 'var(--red)' }}>
+                                GAME #{record.gameNumber}
                               </span>
                               <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
                                 {winnerName.toUpperCase()} WINS
                               </span>
                             </div>
                             <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                              {new Date(snap.timestamp).toLocaleString()}
+                              {new Date(record.timestamp).toLocaleString()}
                             </span>
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="flex flex-col items-end gap-0.5">
                               <div className="flex items-center gap-2 mono text-xs">
                                 <span style={{ color: 'rgba(255,255,255,0.4)' }}>BEFORE</span>
-                                <span style={{ color: 'var(--text)' }}>{snap.totalBefore.toLocaleString()}</span>
+                                <span style={{ color: 'var(--text)' }}>{totalBefore.toLocaleString()}</span>
                               </div>
                               <div className="flex items-center gap-2 mono text-xs">
                                 <span style={{ color: 'rgba(255,255,255,0.4)' }}>AFTER</span>
-                                <span style={{ color: 'var(--text)' }}>{snap.totalAfter.toLocaleString()}</span>
+                                <span style={{ color: 'var(--text)' }}>{totalAfter.toLocaleString()}</span>
                               </div>
                             </div>
-                            <span
-                              className="mono text-xs font-black w-16 text-right"
-                              style={{ color: change === 0 ? 'var(--green)' : 'var(--red)' }}
-                            >
+                            <span className="mono text-xs font-black w-16 text-right" style={{ color: change === 0 ? 'var(--green)' : 'var(--red)' }}>
                               {change === 0 ? '✓ CLEAN' : `${change > 0 ? '+' : ''}${change}`}
                             </span>
                             <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>{isOpen ? '▲' : '▼'}</span>
@@ -134,11 +150,10 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                                 <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.2)' }}>AFTER</span>
                                 <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.2)' }}>NET</span>
                               </div>
-                              {snap.players.map(p => {
+                              {players.map(p => {
                                 const net = p.after - p.before;
                                 return (
                                   <div key={p.userId}>
-                                    {/* Player row */}
                                     <div className="grid items-center" style={{ gridTemplateColumns: '1fr 72px 72px 64px' }}>
                                       <span className="mono text-xs font-black" style={{ color: 'var(--text)' }}>{p.name}</span>
                                       <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.4)' }}>{p.before.toLocaleString()}</span>
@@ -147,37 +162,32 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                                         {net > 0 ? `+${net}` : net < 0 ? `${net}` : '—'}
                                       </span>
                                     </div>
-                                    {/* Bet sub-rows */}
-                                    {p.bets.map((b, i) => {
-                                      const balBefore = p.before - p.bets.slice(0, i).reduce((s, x) => s + x.amount, 0);
-                                      return (
+                                    {p.bets.map((b, i) => (
                                       <div key={i} className="mt-1 pl-3" style={{ borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
                                         <div className="flex items-center gap-2">
                                           <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>└</span>
-                                          <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                                            vs {b.opponentName}
-                                          </span>
+                                          <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>vs {b.opponentName}</span>
                                           <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>{b.amount} coins</span>
                                           <span className="mono text-xs font-black" style={{ color: b.won ? 'var(--green)' : 'var(--red)' }}>
                                             {b.won ? 'WON' : 'LOST'}
                                           </span>
                                         </div>
-                                        <div className="mono text-xs ml-4" style={{ color: 'rgba(0,229,255,0.35)' }}>
-                                          bal before: {balBefore}
-                                        </div>
+                                        {b.startingBalance != null && (
+                                          <div className="mono text-xs ml-4" style={{ color: 'rgba(0,229,255,0.35)' }}>
+                                            bal before: {b.startingBalance}
+                                          </div>
+                                        )}
                                       </div>
-                                      );
-                                    })}
+                                    ))}
                                   </div>
                                 );
                               })}
-                              {/* Totals row */}
                               <div className="grid items-center pt-2 border-t" style={{ gridTemplateColumns: '1fr 72px 72px 64px', borderColor: 'rgba(255,255,255,0.08)' }}>
                                 <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>TOTAL</span>
-                                <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.25)' }}>{snap.totalBefore.toLocaleString()}</span>
-                                <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.25)' }}>{snap.totalAfter.toLocaleString()}</span>
-                                <span className="mono text-xs font-black text-right" style={{ color: snap.totalAfter === snap.totalBefore ? 'var(--green)' : 'var(--red)' }}>
-                                  {snap.totalAfter === snap.totalBefore ? '✓ CLEAN' : `${snap.totalAfter - snap.totalBefore > 0 ? '+' : ''}${snap.totalAfter - snap.totalBefore}`}
+                                <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.25)' }}>{totalBefore.toLocaleString()}</span>
+                                <span className="mono text-xs text-right" style={{ color: 'rgba(255,255,255,0.25)' }}>{totalAfter.toLocaleString()}</span>
+                                <span className="mono text-xs font-black text-right" style={{ color: change === 0 ? 'var(--green)' : 'var(--red)' }}>
+                                  {change === 0 ? '✓ CLEAN' : `${change > 0 ? '+' : ''}${change}`}
                                 </span>
                               </div>
                             </div>
@@ -188,12 +198,12 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                   })}
                 </div>
               )}
-              {gameSnapshots.length > 0 && (
+              {gameHistory.length > 0 && (
                 <div className="flex justify-end px-5 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                   <button
                     className="btn btn-ghost px-3 py-1 text-xs"
                     style={{ color: 'rgba(255,255,255,0.3)' }}
-                    onClick={() => { if (confirm('Clear game balance history?')) clearSnapshots(); }}
+                    onClick={() => { if (confirm('Clear game balance history?')) clearHistory(); }}
                   >
                     CLEAR HISTORY
                   </button>
