@@ -17,6 +17,10 @@ import {
   createOrUpdateUser,
   getUserById,
   authenticateUser,
+  authenticateUserByPin,
+  getUserByName,
+  setUserPin,
+  setUserPassword,
   getAllUsers,
   getUserBalance,
   addTransaction,
@@ -876,17 +880,18 @@ app.get('/api/users/:userId', async (req, res) => {
   }
 });
 
-// Create new user
+// Create new user — accepts a PIN and/or password, and an optional client-generated
+// id so the same id is reused when this device later calls user-login over the socket.
 app.post('/api/users', async (req, res) => {
   try {
-    const { name, password, initialCredits = 0 } = req.body;
+    const { name, password, pin, initialCredits = 0, id } = req.body;
 
-    if (!name || !password) {
-      return res.status(400).json({ error: 'Name and password required' });
+    if (!name || (!password && !pin)) {
+      return res.status(400).json({ error: 'Name and a PIN or password are required' });
     }
 
-    const newUser = await createOrUpdateUser(name, password, initialCredits);
-    
+    const newUser = await createOrUpdateUser(name, password || null, initialCredits, false, pin || null, id || null);
+
     if (!newUser) {
       return res.status(400).json({ error: 'User already exists or creation failed' });
     }
@@ -906,7 +911,7 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// Authenticate user (login)
+// Authenticate user (login) — password-only, kept for backward compatibility
 app.post('/api/users/auth', async (req, res) => {
   try {
     const { name, password } = req.body;
@@ -916,7 +921,7 @@ app.post('/api/users/auth', async (req, res) => {
     }
 
     const user = await authenticateUser(name, password);
-    
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -936,6 +941,79 @@ app.post('/api/users/auth', async (req, res) => {
   } catch (error) {
     console.error(`❌ [USER-AUTH] Error:`, error);
     res.status(500).json({ error: 'Failed to authenticate user' });
+  }
+});
+
+// Unified login — verifies whichever credential type the client is using (PIN or password)
+// server-side against the database. This is the actual source of truth for login;
+// the client no longer trusts a locally-cached PIN/password for authentication.
+app.post('/api/users/login', async (req, res) => {
+  try {
+    const { name, pin, password } = req.body;
+    if (!name || (!pin && !password)) {
+      return res.status(400).json({ error: 'Name and PIN or password required' });
+    }
+
+    const existing = await getUserByName(name);
+    if (!existing) return res.status(404).json({ error: 'Account not found.' });
+
+    if (pin !== undefined) {
+      if (!existing.pin) {
+        // No PIN set yet for this account — first login on any device establishes it.
+        await setUserPin(existing.id, pin);
+      } else if (existing.pin !== pin) {
+        return res.status(401).json({ error: 'Incorrect PIN.' });
+      }
+    } else {
+      if (!existing.password) {
+        return res.status(401).json({ error: 'No password set for this account. Use PIN instead.' });
+      }
+      if (existing.password !== password) {
+        return res.status(401).json({ error: 'Incorrect password.' });
+      }
+    }
+
+    const credits = await getUserBalance(existing.id);
+    res.json({
+      success: true,
+      user: {
+        id: existing.id,
+        name: existing.name,
+        credits,
+        isAdmin: existing.is_admin || false,
+        membershipStatus: existing.membership_status || 'free',
+      },
+    });
+  } catch (error) {
+    console.error('❌ [USER-LOGIN] Error:', error);
+    res.status(500).json({ error: 'Login failed — try again.' });
+  }
+});
+
+// Change PIN or password — verifies the account's current credential first (whichever
+// is set) before writing the new one, so changing credentials always requires proof
+// of the old one.
+app.post('/api/users/:userId/credentials', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { currentCredential, newPin, newPassword } = req.body;
+
+    const user = await getUserById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const hasCredential = !!(user.password || user.pin);
+    if (hasCredential) {
+      const matches = (user.password && user.password === currentCredential) || (user.pin && user.pin === currentCredential);
+      if (!matches) return res.status(401).json({ error: 'Current PIN/password is incorrect.' });
+    }
+
+    if (newPin) await setUserPin(userId, newPin);
+    if (newPassword) await setUserPassword(userId, newPassword);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ [USER-CREDENTIALS] Error:', error);
+    res.status(500).json({ error: 'Failed to update credentials.' });
   }
 });
 

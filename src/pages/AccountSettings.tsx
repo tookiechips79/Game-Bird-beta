@@ -168,7 +168,7 @@ function MembershipTab({ currentUser, navigate }: { currentUser: User; navigate:
 type Tab = 'wallet' | 'bets' | 'transactions' | 'users' | 'membership' | 'security';
 
 export default function AccountSettings() {
-  const { currentUser, setCurrentUser, users, addUser, renameUser, deleteUser, addCredits, updateMembership, setPin, setPassword } = useUser();
+  const { currentUser, setCurrentUser, users, addUser, renameUser, deleteUser, addCredits, updateMembership, changeCredential } = useUser();
   const { gameHistory, isAdmin, setIsAdmin } = useGame();
   const navigate = useNavigate();
 
@@ -259,28 +259,22 @@ export default function AccountSettings() {
     { id: 'security', label: 'SECURITY' },
   ];
 
-  const verifyCurrentCredential = (): boolean => {
-    if (currentUser.password) return secCurrent === currentUser.password;
-    if (currentUser.pin) return secCurrent === currentUser.pin;
-    return true; // no credential set yet — nothing to verify against
-  };
-
-  const handleChangePin = () => {
+  const handleChangePin = async () => {
     setSecMsg(null);
-    if (!verifyCurrentCredential()) { setSecMsg({ text: 'Current PIN/password is incorrect.', ok: false }); return; }
     if (secNewPin.length !== 4) { setSecMsg({ text: 'New PIN must be 4 digits.', ok: false }); return; }
     if (secNewPin !== secNewPin2) { setSecMsg({ text: 'New PINs do not match.', ok: false }); return; }
-    setPin(currentUser.id, secNewPin);
+    const res = await changeCredential(currentUser.id, secCurrent, secNewPin, undefined);
+    if (!res.success) { setSecMsg({ text: res.error || 'Update failed.', ok: false }); return; }
     setSecCurrent(''); setSecNewPin(''); setSecNewPin2('');
     setSecMsg({ text: '✓ PIN updated.', ok: true });
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     setSecMsg(null);
-    if (!verifyCurrentCredential()) { setSecMsg({ text: 'Current PIN/password is incorrect.', ok: false }); return; }
     if (secNewPassword.length < 6) { setSecMsg({ text: 'Password must be at least 6 characters.', ok: false }); return; }
     if (secNewPassword !== secNewPassword2) { setSecMsg({ text: 'Passwords do not match.', ok: false }); return; }
-    setPassword(currentUser.id, secNewPassword);
+    const res = await changeCredential(currentUser.id, secCurrent, undefined, secNewPassword);
+    if (!res.success) { setSecMsg({ text: res.error || 'Update failed.', ok: false }); return; }
     setSecCurrent(''); setSecNewPassword(''); setSecNewPassword2('');
     setSecMsg({ text: '✓ Password updated.', ok: true });
   };

@@ -52,7 +52,7 @@ function PinPad({ value, onChange }: { value: string; onChange: (v: string) => v
 }
 
 export default function Login() {
-  const { users, addUser, setCurrentUser, setPin, claimUserSession } = useUser();
+  const { users, addUser, setCurrentUser, claimUserSession, loginWithCredential } = useUser();
   const { claimAdmin } = useGame();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('login');
@@ -95,23 +95,20 @@ export default function Login() {
 
   const handleLogin = async () => {
     setLoginError('');
-    const user = nonAdminUsers.find(u => u.name.toLowerCase() === loginName.toLowerCase());
-    if (!user) { setLoginError('Account not found.'); return; }
-
-    if (loginMethod === 'password') {
-      if (!user.password) { setLoginError('No password set for this account. Use PIN instead.'); return; }
-      if (user.password !== loginPassword) { setLoginError('Incorrect password.'); setLoginPassword(''); return; }
-    } else {
-      if (user.pin && user.pin !== loginPin) { setLoginError('Incorrect PIN.'); setLoginPin(''); return; }
-      // If no PIN set, accept any PIN and set it
-      if (!user.pin && loginPin.length === 4) {
-        setPin(user.id, loginPin);
-      }
+    // Server is the source of truth for credentials — not whatever's cached locally.
+    const credResult = await loginWithCredential(
+      loginName,
+      loginMethod === 'password' ? { password: loginPassword } : { pin: loginPin }
+    );
+    if (!credResult.success || !credResult.user) {
+      setLoginError(credResult.error || 'Login failed — try again.');
+      if (loginMethod === 'password') setLoginPassword(''); else setLoginPin('');
+      return;
     }
 
-    const res = await claimUserSession(user.id);
+    const res = await claimUserSession(credResult.user.id);
     if (res.success) {
-      setCurrentUser(user);
+      setCurrentUser(credResult.user);
       navigate('/');
     } else if (res.alreadyActive) {
       setLoginError('This account is already logged in on another device.');
@@ -120,7 +117,7 @@ export default function Login() {
     }
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setSignupError('');
     const name = signupName.trim();
     if (!name) { setSignupError('Please enter a name.'); return; }
@@ -130,6 +127,7 @@ export default function Login() {
     if (signupPin.length < 4) { setSignupError('PIN must be 4 digits.'); return; }
     if (signupPin !== signupPin2) { setSignupError('PINs do not match.'); setSignupPin2(''); return; }
     const user = addUser(name, false, 0, signupPin, signupReferral);
+    await claimUserSession(user.id);
     setCurrentUser(user);
     navigate('/');
   };

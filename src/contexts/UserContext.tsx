@@ -21,6 +21,8 @@ interface UserContextType {
   addUser: (name: string, isAdmin?: boolean, initialCredits?: number, pin?: string, referredBy?: string) => User;
   setPin: (userId: string, pin: string) => void;
   setPassword: (userId: string, password: string) => void;
+  changeCredential: (userId: string, currentCredential: string, newPin?: string, newPassword?: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithCredential: (name: string, credential: { pin?: string; password?: string }) => Promise<{ success: boolean; error?: string; user?: User }>;
   renameUser: (userId: string, name: string) => void;
   deleteUser: (userId: string) => void;
   getUserById: (id: string) => User | undefined;
@@ -620,6 +622,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: user.id, name: user.name, isAdmin }),
+    }).then(() => {
+      // Persist the PIN server-side so login can be verified from any device
+      if (pin) {
+        fetch(`${serverUrl}/api/users/${user.id}/credentials`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentCredential: '', newPin: pin }),
+        }).catch(() => {});
+      }
     }).catch(() => {});
     setExpected(expectedTotalRef.current + initialCredits);
     if (initialCredits > 0) {
@@ -628,6 +638,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return user;
   };
 
+  // Local-only cache setters — used for optimistic UI only. The database is the
+  // actual source of truth for login; see changeCredential for the server-verified path.
   const setPin = (userId: string, pin: string) => {
     usersRef.current = usersRef.current.map(u => u.id === userId ? { ...u, pin } : u);
     setUsersAndEmit(prev => prev.map(u => u.id === userId ? { ...u, pin } : u));
@@ -636,6 +648,53 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setPassword = (userId: string, password: string) => {
     usersRef.current = usersRef.current.map(u => u.id === userId ? { ...u, password } : u);
     setUsersAndEmit(prev => prev.map(u => u.id === userId ? { ...u, password } : u));
+  };
+
+  // Server-verified credential change — requires the account's current PIN/password
+  // (if one is set) before writing the new value to the database.
+  const changeCredential = async (userId: string, currentCredential: string, newPin?: string, newPassword?: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const r = await fetch(`${SERVER_URL}/api/users/${userId}/credentials`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentCredential, newPin, newPassword }),
+      });
+      const data = await r.json();
+      if (!r.ok) return { success: false, error: data.error || 'Update failed.' };
+      if (newPin) setPin(userId, newPin);
+      if (newPassword) setPassword(userId, newPassword);
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Network error — try again.' };
+    }
+  };
+
+  // Server-verified login — the database is authoritative for PIN/password, not
+  // whatever happens to be cached in this browser's localStorage.
+  const loginWithCredential = async (name: string, credential: { pin?: string; password?: string }): Promise<{ success: boolean; error?: string; user?: User }> => {
+    try {
+      const r = await fetch(`${SERVER_URL}/api/users/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, ...credential }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.success) return { success: false, error: data.error || 'Login failed.' };
+      // Merge the server-authoritative user into local state
+      const su = data.user;
+      const existingLocal = usersRef.current.find(u => u.id === su.id);
+      const merged: User = existingLocal
+        ? { ...existingLocal, name: su.name, credits: su.credits, isAdmin: su.isAdmin }
+        : { id: su.id, name: su.name, credits: su.credits, isAdmin: su.isAdmin, pendingBets: [] };
+      if (credential.pin) merged.pin = credential.pin;
+      usersRef.current = existingLocal
+        ? usersRef.current.map(u => u.id === su.id ? merged : u)
+        : [...usersRef.current, merged];
+      setUsersAndEmit(prev => existingLocal
+        ? prev.map(u => u.id === su.id ? merged : u)
+        : [...prev, merged]);
+      return { success: true, user: merged };
+    } catch {
+      return { success: false, error: 'Network error — try again.' };
+    }
   };
 
   const renameUser = (userId: string, name: string) => {
@@ -939,7 +998,7 @@ usersRef.current = merged;
   }, [currentUserId]);
 
   return (
-    <UserContext.Provider value={{ users, currentUser, currentUserId, setCurrentUser, claimUserSession, userKickedMessage, clearUserKickedMessage, addUser, setPin, setPassword, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, playerSnaps, recordPlayerSnap, clearPlayerSnaps, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers, mergeServerUsers }}>
+    <UserContext.Provider value={{ users, currentUser, currentUserId, setCurrentUser, claimUserSession, userKickedMessage, clearUserKickedMessage, addUser, setPin, setPassword, changeCredential, loginWithCredential, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, playerSnaps, recordPlayerSnap, clearPlayerSnaps, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers, mergeServerUsers }}>
       {children}
     </UserContext.Provider>
 

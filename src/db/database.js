@@ -22,7 +22,8 @@ export async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
+      password TEXT,
+      pin TEXT,
       is_admin BOOLEAN DEFAULT FALSE,
       wins INTEGER DEFAULT 0,
       losses INTEGER DEFAULT 0,
@@ -116,20 +117,23 @@ export async function initializeDatabase() {
   `);
   // Add is_deleted column to existing DBs that don't have it yet
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
+  // Add pin column and relax password NOT NULL for existing DBs (credential login support)
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT`);
+  await db.query(`ALTER TABLE users ALTER COLUMN password DROP NOT NULL`);
   console.log('✅ [DB] All tables initialized');
 }
 
 // ─────────────────────────────────────────────
 // USERS
 // ─────────────────────────────────────────────
-export async function createOrUpdateUser(name, password, initialCredits = 0, isAdmin = false) {
+export async function createOrUpdateUser(name, password, initialCredits = 0, isAdmin = false, pin = null, explicitId = null) {
   const db = getPool();
-  const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const id = explicitId || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   try {
     const result = await db.query(
-      `INSERT INTO users (id, name, password, is_admin) VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (id, name, password, pin, is_admin) VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (name) DO NOTHING RETURNING *`,
-      [id, name, password, isAdmin]
+      [id, name, password || null, pin, isAdmin]
     );
     if (!result.rows[0]) return null; // already exists
     const user = result.rows[0];
@@ -153,6 +157,28 @@ export async function authenticateUser(name, password) {
   const db = getPool();
   const r = await db.query('SELECT * FROM users WHERE name = $1 AND password = $2', [name, password]);
   return r.rows[0] || null;
+}
+
+export async function authenticateUserByPin(name, pin) {
+  const db = getPool();
+  const r = await db.query('SELECT * FROM users WHERE name = $1 AND pin = $2', [name, pin]);
+  return r.rows[0] || null;
+}
+
+export async function getUserByName(name) {
+  const db = getPool();
+  const r = await db.query('SELECT * FROM users WHERE name = $1 AND is_deleted = FALSE', [name]);
+  return r.rows[0] || null;
+}
+
+export async function setUserPin(userId, pin) {
+  const db = getPool();
+  await db.query('UPDATE users SET pin = $1 WHERE id = $2', [pin, userId]);
+}
+
+export async function setUserPassword(userId, password) {
+  const db = getPool();
+  await db.query('UPDATE users SET password = $1 WHERE id = $2', [password, userId]);
 }
 
 export async function getAllUsers() {
