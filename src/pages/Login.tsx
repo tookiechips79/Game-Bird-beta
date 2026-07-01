@@ -79,6 +79,8 @@ export default function Login() {
   // Login state
   const [loginName, setLoginName] = useState('');
   const [loginPin, setLoginPin] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginMethod, setLoginMethod] = useState<'pin' | 'password'>('pin');
   const [loginError, setLoginError] = useState('');
 
   // Signup state
@@ -95,11 +97,18 @@ export default function Login() {
     setLoginError('');
     const user = nonAdminUsers.find(u => u.name.toLowerCase() === loginName.toLowerCase());
     if (!user) { setLoginError('Account not found.'); return; }
-    if (user.pin && user.pin !== loginPin) { setLoginError('Incorrect PIN.'); setLoginPin(''); return; }
-    // If no PIN set, accept any PIN and set it
-    if (!user.pin && loginPin.length === 4) {
-      setPin(user.id, loginPin);
+
+    if (loginMethod === 'password') {
+      if (!user.password) { setLoginError('No password set for this account. Use PIN instead.'); return; }
+      if (user.password !== loginPassword) { setLoginError('Incorrect password.'); setLoginPassword(''); return; }
+    } else {
+      if (user.pin && user.pin !== loginPin) { setLoginError('Incorrect PIN.'); setLoginPin(''); return; }
+      // If no PIN set, accept any PIN and set it
+      if (!user.pin && loginPin.length === 4) {
+        setPin(user.id, loginPin);
+      }
     }
+
     const res = await claimUserSession(user.id);
     if (res.success) {
       setCurrentUser(user);
@@ -171,16 +180,50 @@ export default function Login() {
                   value={loginName}
                   maxLength={20}
                   autoFocus
-                  onChange={e => { setLoginName(e.target.value); setLoginPin(''); setLoginError(''); }}
+                  onChange={e => {
+                    const name = e.target.value;
+                    setLoginName(name);
+                    setLoginPin('');
+                    setLoginPassword('');
+                    setLoginError('');
+                    // Auto-detect this account's preferred method as the name resolves
+                    const match = nonAdminUsers.find(u => u.name.toLowerCase() === name.toLowerCase());
+                    if (match) setLoginMethod(match.password ? 'password' : 'pin');
+                  }}
                 />
               </div>
 
               {loginName && (
                 <div>
-                  <label className="mono text-xs tracking-[0.2em] uppercase mb-3 block text-center" style={{ color: 'var(--text-dim)' }}>Enter PIN</label>
-                  <div className="flex justify-center">
-                    <PinPad value={loginPin} onChange={v => { setLoginPin(v); setLoginError(''); }} />
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <label className="mono text-xs tracking-[0.2em] uppercase block text-center" style={{ color: 'var(--text-dim)' }}>
+                      {loginMethod === 'pin' ? 'Enter PIN' : 'Enter Password'}
+                    </label>
+                    <button
+                      type="button"
+                      className="mono text-xs underline"
+                      style={{ color: 'var(--cyan)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      onClick={() => { setLoginMethod(m => m === 'pin' ? 'password' : 'pin'); setLoginError(''); setLoginPin(''); setLoginPassword(''); }}
+                    >
+                      use {loginMethod === 'pin' ? 'password' : 'PIN'} instead
+                    </button>
                   </div>
+                  {loginMethod === 'pin' ? (
+                    <div className="flex justify-center">
+                      <PinPad value={loginPin} onChange={v => { setLoginPin(v); setLoginError(''); }} />
+                    </div>
+                  ) : (
+                    <input
+                      type="password"
+                      className="w-full px-3 py-2.5 mono text-sm font-bold"
+                      style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 3, outline: 'none' }}
+                      placeholder="Enter your password..."
+                      value={loginPassword}
+                      onChange={e => { setLoginPassword(e.target.value); setLoginError(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
+                      autoFocus
+                    />
+                  )}
                 </div>
               )}
 
@@ -190,8 +233,8 @@ export default function Login() {
 
               <button
                 className="btn btn-cyan w-full py-3 text-sm font-black tracking-widest mt-1"
-                disabled={!loginName || loginPin.length < 4}
-                style={{ opacity: (!loginName || loginPin.length < 4) ? 0.4 : 1 }}
+                disabled={!loginName || (loginMethod === 'pin' ? loginPin.length < 4 : loginPassword.length === 0)}
+                style={{ opacity: (!loginName || (loginMethod === 'pin' ? loginPin.length < 4 : loginPassword.length === 0)) ? 0.4 : 1 }}
                 onClick={handleLogin}
               >
                 ▶ SIGN IN

@@ -20,6 +20,7 @@ interface UserContextType {
   clearUserKickedMessage: () => void;
   addUser: (name: string, isAdmin?: boolean, initialCredits?: number, pin?: string, referredBy?: string) => User;
   setPin: (userId: string, pin: string) => void;
+  setPassword: (userId: string, password: string) => void;
   renameUser: (userId: string, name: string) => void;
   deleteUser: (userId: string) => void;
   getUserById: (id: string) => User | undefined;
@@ -632,6 +633,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setUsersAndEmit(prev => prev.map(u => u.id === userId ? { ...u, pin } : u));
   };
 
+  const setPassword = (userId: string, password: string) => {
+    usersRef.current = usersRef.current.map(u => u.id === userId ? { ...u, password } : u);
+    setUsersAndEmit(prev => prev.map(u => u.id === userId ? { ...u, password } : u));
+  };
+
   const renameUser = (userId: string, name: string) => {
     usersRef.current = usersRef.current.map(u => u.id === userId ? { ...u, name } : u);
     setUsersAndEmit(prev => prev.map(u => u.id === userId ? { ...u, name } : u));
@@ -933,7 +939,7 @@ usersRef.current = merged;
   }, [currentUserId]);
 
   return (
-    <UserContext.Provider value={{ users, currentUser, currentUserId, setCurrentUser, claimUserSession, userKickedMessage, clearUserKickedMessage, addUser, setPin, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, playerSnaps, recordPlayerSnap, clearPlayerSnaps, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers, mergeServerUsers }}>
+    <UserContext.Provider value={{ users, currentUser, currentUserId, setCurrentUser, claimUserSession, userKickedMessage, clearUserKickedMessage, addUser, setPin, setPassword, renameUser, deleteUser, getUserById, deductCredits, addCredits, refundBet, recordTip, clearPendingBetsForGame, updateMembership, coinAuditLog, acknowledgeAudit, clearAuditLog, gameSnapshots, clearSnapshots, recordGameSnapshot, playerSnaps, recordPlayerSnap, clearPlayerSnaps, adminAuditLog, clearAdminAudit, transferCredits, challenges, createChallenge, acceptChallenge, cancelChallenge, payoutChallenge, requestAllUsers, mergeServerUsers }}>
       {children}
     </UserContext.Provider>
 

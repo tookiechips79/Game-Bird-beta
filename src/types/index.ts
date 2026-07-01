@@ -38,6 +38,7 @@ export interface User {
   id: string;
   name: string;
   pin?: string;
+  password?: string;
   referredBy?: string;
   credits: number;
   isAdmin?: boolean;

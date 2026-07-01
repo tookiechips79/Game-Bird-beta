@@ -165,10 +165,10 @@ function MembershipTab({ currentUser, navigate }: { currentUser: User; navigate:
   );
 }
 
-type Tab = 'wallet' | 'bets' | 'transactions' | 'users' | 'membership';
+type Tab = 'wallet' | 'bets' | 'transactions' | 'users' | 'membership' | 'security';
 
 export default function AccountSettings() {
-  const { currentUser, setCurrentUser, users, addUser, renameUser, deleteUser, addCredits, updateMembership } = useUser();
+  const { currentUser, setCurrentUser, users, addUser, renameUser, deleteUser, addCredits, updateMembership, setPin, setPassword } = useUser();
   const { gameHistory, isAdmin, setIsAdmin } = useGame();
   const navigate = useNavigate();
 
@@ -185,6 +185,15 @@ export default function AccountSettings() {
   const [editingName, setEditingName] = useState('');
   const [adjustId, setAdjustId] = useState<string | null>(null);
   const [adjustAmt, setAdjustAmt] = useState('');
+
+  // Security tab
+  const [secMethod, setSecMethod] = useState<'pin' | 'password'>('pin');
+  const [secCurrent, setSecCurrent] = useState('');
+  const [secNewPin, setSecNewPin] = useState('');
+  const [secNewPin2, setSecNewPin2] = useState('');
+  const [secNewPassword, setSecNewPassword] = useState('');
+  const [secNewPassword2, setSecNewPassword2] = useState('');
+  const [secMsg, setSecMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     if (!currentUser) navigate('/');
@@ -247,7 +256,34 @@ export default function AccountSettings() {
     { id: 'transactions', label: 'TRANSACTIONS' },
     ...(isAdmin ? [{ id: 'users' as Tab, label: 'MANAGE USERS' }] : []),
     { id: 'membership', label: 'MEMBERSHIP' },
+    { id: 'security', label: 'SECURITY' },
   ];
+
+  const verifyCurrentCredential = (): boolean => {
+    if (currentUser.password) return secCurrent === currentUser.password;
+    if (currentUser.pin) return secCurrent === currentUser.pin;
+    return true; // no credential set yet — nothing to verify against
+  };
+
+  const handleChangePin = () => {
+    setSecMsg(null);
+    if (!verifyCurrentCredential()) { setSecMsg({ text: 'Current PIN/password is incorrect.', ok: false }); return; }
+    if (secNewPin.length !== 4) { setSecMsg({ text: 'New PIN must be 4 digits.', ok: false }); return; }
+    if (secNewPin !== secNewPin2) { setSecMsg({ text: 'New PINs do not match.', ok: false }); return; }
+    setPin(currentUser.id, secNewPin);
+    setSecCurrent(''); setSecNewPin(''); setSecNewPin2('');
+    setSecMsg({ text: '✓ PIN updated.', ok: true });
+  };
+
+  const handleChangePassword = () => {
+    setSecMsg(null);
+    if (!verifyCurrentCredential()) { setSecMsg({ text: 'Current PIN/password is incorrect.', ok: false }); return; }
+    if (secNewPassword.length < 6) { setSecMsg({ text: 'Password must be at least 6 characters.', ok: false }); return; }
+    if (secNewPassword !== secNewPassword2) { setSecMsg({ text: 'Passwords do not match.', ok: false }); return; }
+    setPassword(currentUser.id, secNewPassword);
+    setSecCurrent(''); setSecNewPassword(''); setSecNewPassword2('');
+    setSecMsg({ text: '✓ Password updated.', ok: true });
+  };
 
   return (
     <div className="flex flex-col" style={{ minHeight: "100dvh", position: 'relative' }}>
@@ -573,6 +609,109 @@ export default function AccountSettings() {
 
           {/* ── MEMBERSHIP TAB ── */}
           {tab === 'membership' && <MembershipTab currentUser={currentUser} navigate={navigate} />}
+
+          {/* ── SECURITY TAB ── */}
+          {tab === 'security' && (
+            <div className="flex flex-col gap-4">
+              <div className="hud-panel px-5 py-4" style={{ background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(4px)' }}>
+                <div className="text-xs mono tracking-[0.3em] text-[var(--cyan)] uppercase mb-1">Login Method</div>
+                <div className="text-xs mb-3" style={{ color: 'var(--text)' }}>
+                  Currently: {currentUser.password ? 'Password' : 'PIN'} {currentUser.password && currentUser.pin ? '(both set)' : ''}
+                </div>
+                <div className="flex border-b border-[var(--border)]">
+                  {(['pin', 'password'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => { setSecMethod(m); setSecMsg(null); }}
+                      className="px-4 py-2 text-xs font-black tracking-widest uppercase transition-colors"
+                      style={{
+                        color: secMethod === m ? 'var(--cyan)' : 'var(--text)',
+                        background: 'transparent', border: 'none',
+                        borderBottom: secMethod === m ? '2px solid var(--cyan)' : '2px solid transparent',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {m === 'pin' ? 'Change PIN' : 'Change Password'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hud-panel px-5 py-5" style={{ background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(4px)' }}>
+                <div className="text-xs mono tracking-[0.2em] uppercase mb-1 block" style={{ color: 'var(--text-dim)' }}>
+                  Current PIN or Password
+                </div>
+                <input
+                  type="password"
+                  className="w-full px-3 py-2.5 mono text-sm font-bold mb-4"
+                  style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 3, outline: 'none' }}
+                  placeholder={currentUser.password || currentUser.pin ? 'Enter current PIN or password...' : 'No credential set yet — leave blank'}
+                  value={secCurrent}
+                  onChange={e => setSecCurrent(e.target.value)}
+                />
+
+                {secMethod === 'pin' ? (
+                  <>
+                    <div className="text-xs mono tracking-[0.2em] uppercase mb-1 block" style={{ color: 'var(--text-dim)' }}>New 4-Digit PIN</div>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      className="w-full px-3 py-2.5 mono text-sm font-bold mb-3"
+                      style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 3, outline: 'none' }}
+                      placeholder="4 digits..."
+                      value={secNewPin}
+                      onChange={e => setSecNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    />
+                    <div className="text-xs mono tracking-[0.2em] uppercase mb-1 block" style={{ color: 'var(--text-dim)' }}>Confirm New PIN</div>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      className="w-full px-3 py-2.5 mono text-sm font-bold mb-4"
+                      style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 3, outline: 'none' }}
+                      placeholder="4 digits..."
+                      value={secNewPin2}
+                      onChange={e => setSecNewPin2(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    />
+                    <button className="btn btn-cyan w-full py-3 text-sm font-black tracking-widest" onClick={handleChangePin}>
+                      UPDATE PIN
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xs mono tracking-[0.2em] uppercase mb-1 block" style={{ color: 'var(--text-dim)' }}>New Password</div>
+                    <input
+                      type="password"
+                      className="w-full px-3 py-2.5 mono text-sm font-bold mb-3"
+                      style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 3, outline: 'none' }}
+                      placeholder="At least 6 characters..."
+                      value={secNewPassword}
+                      onChange={e => setSecNewPassword(e.target.value)}
+                    />
+                    <div className="text-xs mono tracking-[0.2em] uppercase mb-1 block" style={{ color: 'var(--text-dim)' }}>Confirm New Password</div>
+                    <input
+                      type="password"
+                      className="w-full px-3 py-2.5 mono text-sm font-bold mb-4"
+                      style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 3, outline: 'none' }}
+                      placeholder="Repeat password..."
+                      value={secNewPassword2}
+                      onChange={e => setSecNewPassword2(e.target.value)}
+                    />
+                    <button className="btn btn-cyan w-full py-3 text-sm font-black tracking-widest" onClick={handleChangePassword}>
+                      UPDATE PASSWORD
+                    </button>
+                  </>
+                )}
+
+                {secMsg && (
+                  <div className="mt-3 text-xs mono text-center" style={{ color: secMsg.ok ? 'var(--green)' : 'var(--red)' }}>
+                    {secMsg.text}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
         </main>
       </div>
