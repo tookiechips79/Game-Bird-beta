@@ -92,6 +92,7 @@
     "globals": "^15.9.0",
     "lovable-tagger": "^1.1.3",
     "mkcert": "^3.2.0",
+    "playwright": "^1.61.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.9.3",

@@ -56,10 +56,14 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'rgba(255,215,0,0.15)', flexShrink: 0 }}>
           <div className="flex items-center gap-3">
             <span className="mono text-sm font-black tracking-[0.25em]" style={{ color: 'var(--gold)' }}>COIN AUDIT</span>
-            {unacked > 0 && (
-              <span className="mono text-xs font-black px-2 py-0.5" style={{ background: 'rgba(255,0,64,0.15)', color: 'var(--red)', border: '1px solid rgba(255,0,64,0.4)' }}>
-                ⚠ {unacked} ALERT{unacked > 1 ? 'S' : ''}
-              </span>
+            {driftAlerts > 0 && (
+              <button
+                className="mono text-xs font-black px-2 py-0.5"
+                style={{ background: 'rgba(255,0,64,0.15)', color: 'var(--red)', border: '1px solid rgba(255,0,64,0.4)', cursor: 'pointer' }}
+                onClick={() => setTab('drift')}
+              >
+                ⚠ {driftAlerts} ALERT{driftAlerts > 1 ? 'S' : ''}
+              </button>
             )}
           </div>
           <button className="btn btn-ghost px-2 py-1 text-xs" onClick={onClose}>✕</button>
