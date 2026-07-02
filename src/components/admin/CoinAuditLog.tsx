@@ -104,14 +104,14 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                     const winnerName = record.winningTeam === 'A' ? record.teamAName : record.teamBName;
 
                     // Build per-player view from GameRecord bets (same data as Whitebook)
-                    const playerMap: Record<string, { name: string; bets: { opponentName: string; amount: number; won: boolean; startingBalance?: number }[] }> = {};
+                    const playerMap: Record<string, { name: string; bets: { opponentName: string; amount: number; won: boolean; startingBalance?: number; txId?: string }[] }> = {};
                     record.bets.teamA.forEach((b, i) => {
                       if (!playerMap[b.userId]) playerMap[b.userId] = { name: b.userName, bets: [] };
-                      playerMap[b.userId].bets.push({ opponentName: record.bets.teamB[i]?.userName ?? '?', amount: b.amount, won: b.won, startingBalance: b.startingBalance });
+                      playerMap[b.userId].bets.push({ opponentName: record.bets.teamB[i]?.userName ?? '?', amount: b.amount, won: b.won, startingBalance: b.startingBalance, txId: b.txId });
                     });
                     record.bets.teamB.forEach((b, i) => {
                       if (!playerMap[b.userId]) playerMap[b.userId] = { name: b.userName, bets: [] };
-                      playerMap[b.userId].bets.push({ opponentName: record.bets.teamA[i]?.userName ?? '?', amount: b.amount, won: b.won, startingBalance: b.startingBalance });
+                      playerMap[b.userId].bets.push({ opponentName: record.bets.teamA[i]?.userName ?? '?', amount: b.amount, won: b.won, startingBalance: b.startingBalance, txId: b.txId });
                     });
                     const players = Object.entries(playerMap).map(([userId, data]) => {
                       const before = data.bets[0]?.startingBalance ?? 0;
@@ -184,6 +184,7 @@ export default function CoinAuditLog({ onClose }: { onClose: () => void }) {
                                       <div key={i} className="mt-1 pl-3" style={{ borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
                                         <div className="flex items-center gap-2">
                                           <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>└</span>
+                                          {b.txId && <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>#{b.txId}</span>}
                                           <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>vs {b.opponentName}</span>
                                           <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>{b.amount} coins</span>
                                           <span className="mono text-xs font-black" style={{ color: b.won ? 'var(--green)' : 'var(--red)' }}>

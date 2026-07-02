@@ -163,7 +163,10 @@ function HistoryCard({ record }: { record: GameRecord }) {
                   : record.bets.teamA.map((bet, i) => (
                     <div key={i} className="px-3 py-2 border-b border-[var(--border)] last:border-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">{bet.userName}</span>
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          {bet.txId && <span className="mono text-xs flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>#{bet.txId}</span>}
+                          <span className="text-sm font-semibold truncate">{bet.userName}</span>
+                        </span>
                         <div className="flex items-center gap-1.5 mono text-sm font-bold">
                           <span style={{ color: bet.won ? 'var(--green)' : 'var(--red)' }}>
                             {bet.won ? '+' : '-'}{bet.amount}
@@ -192,7 +195,10 @@ function HistoryCard({ record }: { record: GameRecord }) {
                   : record.bets.teamB.map((bet, i) => (
                     <div key={i} className="px-3 py-2 border-b border-[var(--border)] last:border-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">{bet.userName}</span>
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          {bet.txId && <span className="mono text-xs flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>#{bet.txId}</span>}
+                          <span className="text-sm font-semibold truncate">{bet.userName}</span>
+                        </span>
                         <div className="flex items-center gap-1.5 mono text-sm font-bold">
                           <span style={{ color: bet.won ? 'var(--green)' : 'var(--red)' }}>
                             {bet.won ? '+' : '-'}{bet.amount}

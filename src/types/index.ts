@@ -59,6 +59,7 @@ export interface PendingBet {
 
 export interface Bet {
   id: string;
+  txId: string;
   userId: string;
   userName: string;
   amount: number;
@@ -73,6 +74,8 @@ export interface BookedBet {
   id: string;
   betIdA: string;
   betIdB: string;
+  txIdA: string;
+  txIdB: string;
   userIdA: string;
   userIdB: string;
   userNameA: string;
@@ -88,6 +91,7 @@ export interface GameBet {
   won: boolean;
   booked: boolean;
   startingBalance?: number;
+  txId?: string;
 }
 
 export interface GameRecord {

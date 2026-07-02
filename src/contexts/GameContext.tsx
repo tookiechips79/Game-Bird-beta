@@ -110,6 +110,8 @@ function matchBets(queueA: Bet[], queueB: Bet[]): { bookedBets: BookedBet[]; upd
         id: `booked_${Date.now()}_${Math.random()}`,
         betIdA: ba.id,
         betIdB: match.id,
+        txIdA: ba.txId,
+        txIdB: match.txId,
         userIdA: ba.userId,
         userIdB: match.userId,
         userNameA: ba.userName,
@@ -305,11 +307,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!user || user.credits < amount) return false;
 
     const betId = `bet_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const txId = String(g.betCounter).padStart(5, '0');
     const gameNumber = isNextGame ? g.currentGameNumber + 1 : g.currentGameNumber;
     const colorIdx = g.betCounter % BET_COLORS.length;
 
     const newBet: Bet = {
       id: betId,
+      txId,
       userId,
       userName,
       amount,
@@ -492,6 +496,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         won: (winningTeam === 'A' && b.teamSide === 'A') || (winningTeam === 'B' && b.teamSide === 'B'),
         booked: true,
         startingBalance: betStartBal.get(b.id),
+        txId: b.txId,
       }));
 
     const record: GameRecord = {

@@ -369,6 +369,7 @@ export default function WalletWidget() {
                           <div className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style={{ background: 'var(--gold)', boxShadow: '0 0 4px var(--gold)' }} />
                             <span className="text-xs mono font-black" style={{ color: betColor }}>GAME #{r.gameNumber} — {teamBetOn.toUpperCase()}</span>
+                            {r.txId && <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>#{r.txId}</span>}
                           </div>
                           <span className="text-xs mono tracking-wider" style={{ color: 'var(--gold)', paddingLeft: 14 }}>LIVE · MATCHED</span>
                         </div>
@@ -384,7 +385,10 @@ export default function WalletWidget() {
                     return (
                       <div key={`${r.record.id}-${i}`} className="flex items-center justify-between px-4 py-2 hover:bg-black" style={{ borderLeft: `3px solid ${betColor}` }}>
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-xs mono font-black" style={{ color: betColor }}>GAME #{r.record.gameNumber} — {teamBetOn.toUpperCase()}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs mono font-black" style={{ color: betColor }}>GAME #{r.record.gameNumber} — {teamBetOn.toUpperCase()}</span>
+                            {r.txId && <span className="mono text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>#{r.txId}</span>}
+                          </div>
                           <span className="text-xs mono text-[var(--text)] tracking-wider">
                             {new Date(r.record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{'  ·  '}<span style={{ color: winnerColor }}>W: {winner}</span>
                           </span>
@@ -407,8 +411,8 @@ export default function WalletWidget() {
                 <div className="flex items-center justify-center h-16 text-xs mono text-[var(--text)] tracking-widest">NO BETS YET</div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
-                  <div className="grid grid-cols-5 px-4 py-2" style={{ background: 'rgba(0,229,255,0.04)' }}>
-                    {['Game', 'Side', 'Amt', 'Result', 'Date'].map(h => (
+                  <div className="grid grid-cols-6 px-4 py-2" style={{ background: 'rgba(0,229,255,0.04)' }}>
+                    {['Tx', 'Game', 'Side', 'Amt', 'Result', 'Date'].map(h => (
                       <div key={h} className="text-xs mono text-[var(--text)] tracking-widest uppercase">{h}</div>
                     ))}
                   </div>
@@ -416,7 +420,8 @@ export default function WalletWidget() {
                     const teamName = b.side === 'A' ? b.record.teamAName : b.record.teamBName;
                     const dateStr = new Date(b.record.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
                     return (
-                      <div key={i} className="grid grid-cols-5 px-4 py-2 items-center hover:bg-black">
+                      <div key={i} className="grid grid-cols-6 px-4 py-2 items-center hover:bg-black">
+                        <div className="text-xs mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{b.txId ? `#${b.txId}` : '—'}</div>
                         <div className="text-xs mono text-[var(--text)]">#{b.record.gameNumber}</div>
                         <div className="text-xs font-black uppercase tracking-wide" style={{ color: b.side === 'A' ? 'var(--cyan)' : 'var(--red)' }}>{teamName}</div>
                         <div className="text-xs mono" style={{ color: 'var(--text)' }}>{b.amount}</div>
