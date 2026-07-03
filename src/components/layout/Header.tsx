@@ -90,7 +90,7 @@ export default function Header() {
             <Link
               to="/admin"
               className="text-xs mono px-2 py-1 flex items-center gap-1"
-              style={{ color: 'var(--gold)', border: '1px solid var(--gold)', opacity: 0.8, textDecoration: 'none', whiteSpace: 'nowrap' }}
+              style={{ color: '#000', border: '1px solid #000', opacity: 0.8, textDecoration: 'none', whiteSpace: 'nowrap' }}
             >
               ADMIN
             </Link>
@@ -102,9 +102,9 @@ export default function Header() {
             onClick={() => setMobileOpen(o => !o)}
             aria-label="Menu"
           >
-            <span style={{ display: 'block', width: 22, height: 2, background: mobileOpen ? '#000' : '#fff', transition: 'all 0.2s', transform: mobileOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: mobileOpen ? 'transparent' : '#fff', transition: 'all 0.2s' }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: mobileOpen ? '#000' : '#fff', transition: 'all 0.2s', transform: mobileOpen ? 'translateY(-7px) rotate(-45deg)' : 'none' }} />
+            <span style={{ display: 'block', width: 22, height: 2, background: (mobileOpen || isAdmin) ? '#000' : '#fff', transition: 'all 0.2s', transform: mobileOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
+            <span style={{ display: 'block', width: 22, height: 2, background: mobileOpen ? 'transparent' : (isAdmin ? '#000' : '#fff'), transition: 'all 0.2s' }} />
+            <span style={{ display: 'block', width: 22, height: 2, background: (mobileOpen || isAdmin) ? '#000' : '#fff', transition: 'all 0.2s', transform: mobileOpen ? 'translateY(-7px) rotate(-45deg)' : 'none' }} />
           </button>
         </div>
 
