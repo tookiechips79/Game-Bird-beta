@@ -3,6 +3,10 @@ import { GameState, Bet, BookedBet, GameRecord, GameBet } from '@/types';
 import { useUser } from './UserContext';
 import { io, Socket } from 'socket.io-client';
 
+const SERVER_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3001'
+  : 'https://gamebird-app-production.up.railway.app';
+
 interface GameContextType {
   game: GameState;
   updateGame: (updates: Partial<GameState>) => void;
@@ -19,7 +23,7 @@ interface GameContextType {
   placeBet: (userId: string, userName: string, teamSide: 'A' | 'B', amount: number, isNextGame?: boolean) => boolean;
   cancelBet: (betId: string, teamSide: 'A' | 'B', isNextGame?: boolean) => void;
   // Game win
-  declareWinner: (winningTeam: 'A' | 'B') => void;
+  declareWinner: (winningTeam: 'A' | 'B') => Promise<void>;
   // History
   gameHistory: GameRecord[];
   clearHistory: () => void;
@@ -371,7 +375,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const declareWinner = useCallback((winningTeam: 'A' | 'B') => {
+  const declareWinner = useCallback(async (winningTeam: 'A' | 'B') => {
     const g = gameRef.current;
     if (decidedGameRef.current === g.currentGameNumber) return; // already settled — ignore duplicate call
     decidedGameRef.current = g.currentGameNumber;
@@ -386,10 +390,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const allBets = [...g.teamAQueue, ...g.teamBQueue];
     const betSumByUser: Record<string, number> = {};
     allBets.forEach(b => { betSumByUser[b.userId] = (betSumByUser[b.userId] || 0) + b.amount; });
+
+    // Fetch each affected player's ACTUAL database balance rather than trusting this
+    // device's local cache — a stale local credits value (e.g. admin hasn't refreshed
+    // since the player's last unrelated action) would otherwise make the audit trail's
+    // before/after numbers not match the player's real balance.
+    const affectedUserIds = Object.keys(betSumByUser);
+    let freshBalances: Record<string, number> = {};
+    try {
+      const r = await fetch(`${SERVER_URL}/api/credits/batch`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: affectedUserIds }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        freshBalances = data.balances || {};
+      }
+    } catch {}
+
     const preBalances: Record<string, number> = {};
-    Object.keys(betSumByUser).forEach(id => {
-      const u = getUserById(id);
-      if (u) preBalances[id] = u.credits + betSumByUser[id];
+    affectedUserIds.forEach(id => {
+      const fresh = freshBalances[id];
+      const fallback = getUserById(id)?.credits;
+      const base = fresh ?? fallback;
+      if (base !== undefined) preBalances[id] = base + betSumByUser[id];
     });
     const runningDed: Record<string, number> = {};
     const balanceBefore = (userId: string, amt: number) => {
@@ -432,12 +456,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       winningTeam,
       players: users
         .filter(u => !u.isAdmin)
-        .map(u => ({
-          userId: u.id,
-          name: u.name,
-          before: u.credits + (betSumByUser[u.id] || 0),
-          after:  u.credits + (totalPayoutByUser[u.id] || 0),
-        })),
+        .map(u => {
+          const base = freshBalances[u.id] ?? u.credits;
+          return {
+            userId: u.id,
+            name: u.name,
+            before: base + (betSumByUser[u.id] || 0),
+            after:  base + (totalPayoutByUser[u.id] || 0),
+          };
+        }),
     });
     // Build snapshot purely from game data — no ref timing issues
     // Collect unique players and their matched bets

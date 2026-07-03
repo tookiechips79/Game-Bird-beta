@@ -563,6 +563,23 @@ app.get('/api/credits/:userId', async (req, res) => {
   }
 });
 
+// Batch balance fetch — used at game-settlement time so the audit trail (Game
+// Balances / Player Snapshots) is always computed from actual DB balances, never
+// from a device's potentially-stale local cache of other players' credits.
+app.post('/api/credits/batch', async (req, res) => {
+  try {
+    const { userIds } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: 'userIds array required' });
+    }
+    const entries = await Promise.all(userIds.map(async (id) => [id, await getUserBalance(id)]));
+    res.json({ balances: Object.fromEntries(entries) });
+  } catch (error) {
+    console.error('❌ [CREDITS-BATCH] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch balances' });
+  }
+});
+
 // Get user transaction history
 app.get('/api/credits/:userId/history', async (req, res) => {
   try {
