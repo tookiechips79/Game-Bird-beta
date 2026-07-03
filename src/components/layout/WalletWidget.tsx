@@ -416,7 +416,7 @@ export default function WalletWidget() {
                       <div key={h} className="text-xs mono text-[var(--text)] tracking-widest uppercase">{h}</div>
                     ))}
                   </div>
-                  {[...mySettledBets].reverse().map((b, i) => {
+                  {mySettledBets.map((b, i) => {
                     const teamName = b.side === 'A' ? b.record.teamAName : b.record.teamBName;
                     const dateStr = new Date(b.record.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
                     return (
