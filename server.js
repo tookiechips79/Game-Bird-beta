@@ -669,7 +669,8 @@ app.post('/api/credits/:userId/bet', async (req, res) => {
     
     const newBalance = await getUserBalance(userId);
     console.log(`✅ [CREDITS-BET] Success: ${userId} balance updated ${oldBalance} → ${newBalance}`);
-    
+
+    io.emit('users:push'); // notify all devices (incl. admin's user switcher) to re-sync balances
     res.json({ success: true, transaction, newBalance });
   } catch (error) {
     console.error(`❌ [CREDITS-BET] Error:`, error);
@@ -682,18 +683,19 @@ app.post('/api/credits/:userId/refund', async (req, res) => {
   try {
     const { userId } = req.params;
     const { amount, reason = '' } = req.body;
-    
+
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid refund amount' });
     }
-    
+
     const transaction = await addTransaction(userId, 'bet_refunded', amount, reason);
-    
+
     if (!transaction) {
       return res.status(400).json({ error: 'Could not process refund' });
     }
-    
+
     const newBalance = await getUserBalance(userId);
+    io.emit('users:push');
     res.json({ success: true, transaction, newBalance });
   } catch (error) {
     console.error(`❌ [CREDITS-REFUND] Error:`, error);
@@ -706,18 +708,19 @@ app.post('/api/credits/:userId/win', async (req, res) => {
   try {
     const { userId } = req.params;
     const { amount, betDetails = '' } = req.body;
-    
+
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid win amount' });
     }
-    
+
     const transaction = await addTransaction(userId, 'bet_won', amount, betDetails);
-    
+
     if (!transaction) {
       return res.status(400).json({ error: 'Could not process win' });
     }
-    
+
     const newBalance = await getUserBalance(userId);
+    io.emit('users:push');
     res.json({ success: true, transaction, newBalance });
   } catch (error) {
     console.error(`❌ [CREDITS-WIN] Error:`, error);
