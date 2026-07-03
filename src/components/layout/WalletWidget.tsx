@@ -189,7 +189,7 @@ export default function WalletWidget() {
 
   const liveMatched = [...game.teamAQueue, ...game.teamBQueue]
     .filter(b => b.booked && b.userId === currentUser.id)
-    .map(b => ({ type: 'live' as const, id: b.id, gameNumber: game.currentGameNumber, teamSide: b.teamSide, amount: b.amount, nameA: game.teamAName, nameB: game.teamBName }));
+    .map(b => ({ type: 'live' as const, id: b.id, txId: b.txId, gameNumber: game.currentGameNumber, teamSide: b.teamSide, amount: b.amount, nameA: game.teamAName, nameB: game.teamBName }));
 
   const settled = gameHistory.flatMap(record => {
     const nameA = (!record.teamAName || record.teamAName === 'Player A') ? fallbackA : record.teamAName;
