@@ -283,6 +283,7 @@ const createDefaultGameState = () => ({
 
 // Map to store game state for each arena
 const gbStateStore = {}; // GameBird V2 frontend state per arena
+const gbHistoryStore = {}; // GameBird V2 gameHistory (GameRecord[]) per arena
 let gbUsersStore = []; // Latest full user list broadcast from any client
 const deletedUserIds = new Set(); // IDs that should never be re-added
 
@@ -1292,6 +1293,12 @@ io.on('connection', (socket) => {
       if (gbStateStore[currentArenaId]) {
         socket.emit('gb:state', gbStateStore[currentArenaId]);
       }
+
+      // Send GB V2 game history if available — without this, a device that wasn't
+      // connected when a game was declared never receives that game's record.
+      if (gbHistoryStore[currentArenaId]) {
+        socket.emit('history:state', gbHistoryStore[currentArenaId]);
+      }
       
       // Emit initial timer state with server's authoritative start time
       const currentElapsed = timer.continuousStartTime 
@@ -1665,6 +1672,16 @@ io.on('connection', (socket) => {
     if (!gbStateStore[arenaId]) gbStateStore[arenaId] = data;
     else Object.assign(gbStateStore[arenaId], data);
     socket.to(`arena:${arenaId}`).emit('gb:state', gbStateStore[arenaId]);
+  });
+
+  // Relay + cache GB V2 game history so every connected device (not just the one
+  // that declared the winner) receives each finished game's record in real time,
+  // and so a device joining later gets the current history on connect.
+  socket.on('history:update', (records) => {
+    if (!Array.isArray(records)) return;
+    const arenaId = currentArenaId || 'default';
+    gbHistoryStore[arenaId] = records;
+    socket.to(`arena:${arenaId}`).emit('history:state', records);
   });
 
   socket.on('game-state-update', (gameStateData) => {
