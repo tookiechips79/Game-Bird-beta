@@ -81,10 +81,10 @@ function BetButtons({ color, teamSide, isNextGame, onPlaceBet }: {
     >
       {[10, 50, 100].map(amt => (
         <button key={amt}
-          className="bet-circle flex items-center justify-center text-xs font-black mono transition-all active:scale-95"
-          style={{ width: 52, height: 52, borderRadius: '50%', background: `${color}18`, border: `2px solid ${color}`, color, boxShadow: `0 0 8px ${color}30`, alignSelf: 'center', margin: '0 auto' }}
+          className="bet-circle btn-glow-dynamic flex items-center justify-center text-xs font-black mono transition-all active:scale-95"
+          style={{ width: 52, height: 52, borderRadius: '50%', background: `${color}18`, border: `2px solid ${color}`, color, '--glow-color': color, alignSelf: 'center', margin: '0 auto' } as React.CSSProperties}
           onMouseEnter={e => { playHoverSound(); e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; e.currentTarget.style.boxShadow = `0 0 16px ${color}`; }}
-          onMouseLeave={e => { e.currentTarget.style.background = `${color}18`; e.currentTarget.style.color = color; e.currentTarget.style.boxShadow = `0 0 8px ${color}30`; }}
+          onMouseLeave={e => { e.currentTarget.style.background = `${color}18`; e.currentTarget.style.color = color; e.currentTarget.style.boxShadow = ''; }}
           onClick={() => onPlaceBet(teamSide, amt, isNextGame)}
         >{amt}</button>
       ))}
@@ -92,8 +92,8 @@ function BetButtons({ color, teamSide, isNextGame, onPlaceBet }: {
         className="w-full bg-transparent px-1 py-1.5 text-xs mono outline-none text-center placeholder:text-[var(--text-dim)]"
         style={{ border: `1px solid ${color}40`, color }}
         value={inputAmt} onChange={e => setInputAmt(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
-      <button className="w-full py-1.5 text-xs font-black tracking-widest mono transition-all active:scale-95"
-        style={{ background: color, color: '#000', border: 'none', boxShadow: `0 0 8px ${color}50` }}
+      <button className="w-full py-1.5 text-xs font-black tracking-widest mono transition-all active:scale-95 btn-glow-dynamic"
+        style={{ background: color, color: '#000', border: 'none', '--glow-color': color } as React.CSSProperties}
         onClick={submit}>BET</button>
       <style>{`
         @media (max-width: 1023px) {

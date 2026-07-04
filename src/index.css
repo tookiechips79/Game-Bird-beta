@@ -177,6 +177,15 @@ body {
 .btn-glow { animation: subscribeGlow 2s ease-in-out infinite; }
 .btn-glow:hover { animation-play-state: paused; }
 
+/* Same pulse, but color follows a --glow-color custom property so it works with
+   any accent (e.g. per-team cyan/red bet buttons) instead of being locked to cyan. */
+@keyframes dynamicGlow {
+  0%, 100% { box-shadow: 0 0 6px color-mix(in srgb, var(--glow-color) 45%, transparent), 0 0 0 rgba(0,0,0,0); }
+  50%      { box-shadow: 0 0 22px color-mix(in srgb, var(--glow-color) 90%, transparent), 0 0 40px color-mix(in srgb, var(--glow-color) 40%, transparent); }
+}
+.btn-glow-dynamic { animation: dynamicGlow 2s ease-in-out infinite; }
+.btn-glow-dynamic:hover { animation-play-state: paused; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
