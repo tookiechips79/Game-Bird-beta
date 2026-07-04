@@ -56,8 +56,8 @@ function TipButton({ playerName, color, align }: { playerName: string; color: st
     <>
       <button
         ref={btnRef}
-        className="btn w-full py-1.5 text-xs font-black tracking-widest"
-        style={{ border: `1px solid ${color}`, color, background: `${color}15` }}
+        className="btn btn-glow-dynamic w-full py-1.5 text-xs font-black tracking-widest"
+        style={{ border: `1px solid ${color}`, color, background: `${color}15`, '--glow-color': color } as React.CSSProperties}
         onClick={() => setOpen(v => !v)}
       >
         TIP
