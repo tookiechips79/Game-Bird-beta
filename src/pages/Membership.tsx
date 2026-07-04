@@ -53,7 +53,7 @@ function CheckoutForm({ mode, reloadAmt, onSuccess }: {
       <button
         type="submit"
         disabled={processing || !stripe}
-        className="btn w-full py-3 text-sm font-black tracking-widest"
+        className={`btn w-full py-3 text-sm font-black tracking-widest ${mode === 'subscription' ? 'btn-glow' : ''}`}
         style={{
           border: `1px solid ${mode === 'subscription' ? 'var(--cyan)' : 'var(--gold)'}`,
           color: mode === 'subscription' ? 'var(--cyan)' : 'var(--gold)',
@@ -215,7 +215,7 @@ export default function Membership() {
               <div className="flex flex-col gap-3">
                 {loadError && <div className="text-xs mono text-center" style={{ color: 'var(--red)' }}>{loadError}</div>}
                 <button
-                  className="btn w-full py-3 text-sm font-black tracking-widest"
+                  className={`btn w-full py-3 text-sm font-black tracking-widest ${mode === 'subscription' ? 'btn-glow' : ''}`}
                   style={{
                     border: `1px solid ${mode === 'subscription' ? 'var(--cyan)' : 'var(--gold)'}`,
                     color: mode === 'subscription' ? 'var(--cyan)' : 'var(--gold)',
