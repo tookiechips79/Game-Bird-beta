@@ -385,6 +385,7 @@ export default function Landing() {
                 <Link to="/terms" style={{ color: 'var(--text)', textDecoration: 'none' }} className="hover:text-[var(--cyan)] transition-colors">Terms of Use</Link>
                 <Link to="/privacy" style={{ color: 'var(--text)', textDecoration: 'none' }} className="hover:text-[var(--cyan)] transition-colors">Privacy Policy</Link>
                 <Link to="/disclaimer" style={{ color: 'var(--text)', textDecoration: 'none' }} className="hover:text-[var(--cyan)] transition-colors">Disclaimer</Link>
+                <Link to="/contact" style={{ color: 'var(--text)', textDecoration: 'none' }} className="hover:text-[var(--cyan)] transition-colors">Contact</Link>
               </div>
             </div>
             <div className="border-t border-[var(--border)] mt-5 pt-4 text-center mono text-xs text-[var(--text)]">
