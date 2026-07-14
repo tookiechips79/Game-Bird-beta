@@ -15,7 +15,7 @@ interface UserContextType {
   currentUser: User | null;
   currentUserId: string | null;
   setCurrentUser: (user: User | null) => void;
-  claimUserSession: (userId: string) => Promise<{ success: boolean; error?: string; alreadyActive?: boolean }>;
+  claimUserSession: (userId: string, reconnect?: boolean) => Promise<{ success: boolean; error?: string; alreadyActive?: boolean }>;
   userKickedMessage: string | null;
   clearUserKickedMessage: () => void;
   addUser: (name: string, isAdmin?: boolean, initialCredits?: number, pin?: string, referredBy?: string) => User;
@@ -591,7 +591,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Claims exclusive login session for this account. If another device already holds
   // it, the claim is refused outright (alreadyActive) — no takeover option. The other
   // device must log out (or disconnect) before this login can succeed.
-  const claimUserSession = (userId: string): Promise<{ success: boolean; error?: string; alreadyActive?: boolean }> => {
+  //
+  // reconnect:true is only ever used internally by the socket-reconnect handler below
+  // (a browser that already has this account's session stored locally, e.g. after a
+  // page refresh) — it lets that device reclaim its own session immediately instead of
+  // waiting out the server's ping-timeout window. Never set true from a login form.
+  const claimUserSession = (userId: string, reconnect = false): Promise<{ success: boolean; error?: string; alreadyActive?: boolean }> => {
     return new Promise((resolve) => {
       const socket = socketRef.current;
       if (!socket || !socket.connected) { resolve({ success: false, error: 'Not connected to server.' }); return; }
@@ -603,7 +608,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         resolve(res);
       };
       socket.on('user:claim:result', handler);
-      socket.emit('user:claim', { userId });
+      socket.emit('user:claim', { userId, reconnect });
       setTimeout(() => {
         if (settled) return;
         settled = true;
@@ -989,7 +994,10 @@ usersRef.current = merged;
   // Refresh on socket reconnect — also re-claim this account's session slot (every
   // reconnect gets a new socket.id, so the server's activeUserSocket entry would
   // otherwise go stale and silently stop enforcing single-session for this account).
-  // If another device legitimately took over while we were disconnected, we log out.
+  // reconnect:true tells the server this is the SAME browser continuing its own
+  // already-established session (not a new login), so it always wins immediately
+  // instead of erroring against the pre-refresh socket's not-yet-timed-out claim —
+  // that race is exactly what was kicking users out on every page refresh.
   // Skipped entirely while in admin mode — admin can browse any user account from
   // the UserBar switcher without that being treated as "logging in" as that account.
   useEffect(() => {
@@ -1000,7 +1008,7 @@ usersRef.current = merged;
       fetchAndMergeFromServer();
       const isAdminMode = localStorage.getItem('gb_admin') === '1';
       if (isAdminMode) return;
-      claimUserSession(currentUserId).then(res => {
+      claimUserSession(currentUserId, true).then(res => {
         if (!res.success && res.alreadyActive) {
           setCurrentUserId(null);
           try { sessionStorage.removeItem('gb_session_active'); } catch {}

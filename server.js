@@ -1420,15 +1420,26 @@ io.on('connection', (socket) => {
   });
 
   // Claim exclusive session for a regular user account. If the account is already
-  // active elsewhere, the claim is refused outright — no takeover option. The only
-  // way in is for the existing session to log out (or its socket to disconnect),
-  // which releases the slot.
-  socket.on('user:claim', ({ userId } = {}) => {
+  // active elsewhere, the claim is refused outright for a fresh login attempt — no
+  // takeover option, so a different device typing this account's password/PIN can
+  // never silently boot an active session.
+  //
+  // reconnect:true is different — it only ever comes from a browser that ALREADY
+  // has this account's session stored locally (a page refresh recreating the socket,
+  // not a new login form submission), so it's never reachable by an attacker who
+  // merely knows the password. Without this, every refresh risks getting kicked out:
+  // the OLD socket from before the refresh can take up to ~65s to be detected as
+  // disconnected, so the NEW socket's claim would otherwise be rejected against the
+  // user's own just-refreshed self.
+  socket.on('user:claim', ({ userId, reconnect = false } = {}) => {
     if (!userId) { socket.emit('user:claim:result', { success: false, error: 'Missing userId' }); return; }
     const existing = activeUserSocket.get(userId);
     if (existing && existing !== socket.id) {
-      socket.emit('user:claim:result', { success: false, error: 'This account is already logged in on another device.', alreadyActive: true });
-      return;
+      if (!reconnect) {
+        socket.emit('user:claim:result', { success: false, error: 'This account is already logged in on another device.', alreadyActive: true });
+        return;
+      }
+      console.log(`🔄 [SESSION] Socket ${socket.id} reclaimed account ${userId} on reconnect (was ${existing})`);
     }
     activeUserSocket.set(userId, socket.id);
     socket.emit('user:claim:result', { success: true });
