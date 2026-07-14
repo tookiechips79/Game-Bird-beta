@@ -61,18 +61,28 @@ export default function Login() {
   const [adminPwError, setAdminPwError] = useState(false);
   const [adminBusyMsg, setAdminBusyMsg] = useState('');
   const adminInputRef = useRef<HTMLInputElement>(null);
+  const adminSubmittingRef = useRef(false);
 
+  // Guarded against double-fire (Enter keydown + button onClick can both trigger
+  // for a single interaction) — see Header.tsx submitPassword for the full race
+  // condition this prevents.
   const submitAdminPw = async () => {
-    const res = await claimAdmin(adminPw);
-    if (res.success) {
-      navigate('/admin');
-    } else if (res.alreadyActive) {
-      setAdminBusyMsg('Admin is already logged in on another device.');
-      setAdminPw('');
-    } else {
-      setAdminPwError(true);
-      setAdminPw('');
-      setTimeout(() => adminInputRef.current?.focus(), 50);
+    if (adminSubmittingRef.current) return;
+    adminSubmittingRef.current = true;
+    try {
+      const res = await claimAdmin(adminPw);
+      if (res.success) {
+        navigate('/admin');
+      } else if (res.alreadyActive) {
+        setAdminBusyMsg('Admin is already logged in on another device.');
+        setAdminPw('');
+      } else {
+        setAdminPwError(true);
+        setAdminPw('');
+        setTimeout(() => adminInputRef.current?.focus(), 50);
+      }
+    } finally {
+      adminSubmittingRef.current = false;
     }
   };
 

@@ -26,6 +26,7 @@ export default function Header() {
   const [pwBusyMsg, setPwBusyMsg] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const submittingRef = useRef(false);
 
   const openPrompt = () => {
     setPw('');
@@ -35,18 +36,29 @@ export default function Header() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  // Guarded against double-fire (Enter keydown + button onClick can both trigger
+  // for a single interaction) — without this, two near-simultaneous claim requests
+  // could race: the first succeeds and claims admin, the second arrives moments
+  // later and gets rejected as "already active", overwriting the success state
+  // shown to the user even though they're actually already logged in.
   const submitPassword = async () => {
-    const res = await claimAdmin(pw);
-    if (res.success) {
-      setShowPwPrompt(false);
-      navigate('/admin');
-    } else if (res.alreadyActive) {
-      setPwBusyMsg('Admin is already logged in on another device.');
-      setPw('');
-    } else {
-      setPwError(true);
-      setPw('');
-      setTimeout(() => inputRef.current?.focus(), 50);
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    try {
+      const res = await claimAdmin(pw);
+      if (res.success) {
+        setShowPwPrompt(false);
+        navigate('/admin');
+      } else if (res.alreadyActive) {
+        setPwBusyMsg('Admin is already logged in on another device.');
+        setPw('');
+      } else {
+        setPwError(true);
+        setPw('');
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    } finally {
+      submittingRef.current = false;
     }
   };
 
