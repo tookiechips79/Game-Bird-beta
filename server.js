@@ -1537,10 +1537,13 @@ io.on('connection', (socket) => {
           pendingBets: local?.pendingBets || [],
         };
       }));
-      if (hydrated.length > 0) socket.emit('users:state', hydrated);
-      else if (gbUsersStore.length > 0) socket.emit('users:state', gbUsersStore);
+      // Broadcast to everyone, not just this socket — other already-connected clients
+      // may have never seen this account before (first-ever login) and would otherwise
+      // never learn it exists, breaking real-time online counts like Coins In Action.
+      if (hydrated.length > 0) io.emit('users:state', hydrated);
+      else if (gbUsersStore.length > 0) io.emit('users:state', gbUsersStore);
     } catch(e) {
-      if (gbUsersStore.length > 0) socket.emit('users:state', gbUsersStore);
+      if (gbUsersStore.length > 0) io.emit('users:state', gbUsersStore);
     }
 
     // Broadcast updated connected users coins to all clients
