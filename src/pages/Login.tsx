@@ -145,7 +145,7 @@ export default function Login() {
   return (
     <div className="flex flex-col items-center justify-center" style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
       {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url(https://scontent-sjc6-1.xx.fbcdn.net/v/t39.30808-6/492011886_10213524164374025_5298605409934430000_n.jpg?stp=dst-jpg_tt6&cstp=mx2048x1448&ctp=s2048x1448&_nc_cat=102&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=PoE5g3QHd1kQ7kNvwFDpt3b&_nc_oc=Adr75vuEouNrh267qKNqq5xNfuBd6Z1sce3DjEvCBbZeJfA3QfRQ5Tb8PWzjOvLJhrQ&_nc_zt=23&_nc_ht=scontent-sjc6-1.xx&_nc_gid=tE04Vd1MJBqGMZupeD81DQ&_nc_ss=7b289&oh=00_Af9xox8mSRH8SZOv6qMLckD6kMyPO6JtQz_B4SKh-O4HJQ&oe=6A442206)', backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
+      <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url(/pool-background.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,4,18,0.25)', zIndex: 1 }} />
 
       <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 380, padding: '0 16px' }}>
