@@ -33,12 +33,13 @@ export default function Contact() {
 
           <div className="hud-panel overflow-hidden">
             <div className="px-4 py-2.5 border-b border-[var(--border)]" style={{ background: 'rgba(255,215,0,0.03)' }}>
-              <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--gold)' }}>Phone</span>
+              <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--gold)' }}>Text</span>
             </div>
-            <div className="px-4 py-4">
-              <a href="tel:+17026630500" className="text-lg font-black mono" style={{ color: 'var(--text)', textDecoration: 'none' }}>
+            <div className="px-4 py-4 flex flex-col gap-1">
+              <a href="sms:+17026630500" className="text-lg font-black mono" style={{ color: 'var(--text)', textDecoration: 'none' }}>
                 +1 (702) 663-0500
               </a>
+              <span className="text-xs mono" style={{ color: 'rgba(255,255,255,0.35)' }}>Text only — this number does not accept calls</span>
             </div>
           </div>
         </div>
