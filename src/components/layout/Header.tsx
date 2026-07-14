@@ -57,10 +57,10 @@ export default function Header() {
         style={{ background: isAdmin ? '#00cc44' : '#cc0000', borderColor: '#000', position: 'sticky', top: 0, zIndex: 100, minWidth: 0 }}
       >
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-1.5 no-underline flex-shrink-0" onClick={() => setMobileOpen(false)}>
-          <img src="/mascot-logo.jpg" alt="Game Bird" style={{ width: 70, height: 70, flexShrink: 0 }} />
-          <span className="text-xl tracking-wide" style={{ color: '#000', fontFamily: "'Spicy Sale', 'Barlow Condensed', sans-serif" }}>Game Bird</span>
-          <span className="text-xs mono" style={{ color: isAdmin ? '#000' : '#fff' }}>beta</span>
+        <Link to="/" className="flex items-center gap-1 lg:gap-1.5 no-underline flex-shrink min-w-0" onClick={() => setMobileOpen(false)}>
+          <img src="/mascot-logo.jpg" alt="Game Bird" className="w-10 h-10 lg:w-[70px] lg:h-[70px]" style={{ flexShrink: 0 }} />
+          <span className="text-sm lg:text-xl tracking-wide truncate" style={{ color: '#000', fontFamily: "'Spicy Sale', 'Barlow Condensed', sans-serif" }}>Game Bird</span>
+          <span className="hidden sm:inline text-xs mono flex-shrink-0" style={{ color: isAdmin ? '#000' : '#fff' }}>beta</span>
         </Link>
 
         {/* Desktop Nav */}
