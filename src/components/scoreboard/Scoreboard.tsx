@@ -200,7 +200,11 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
           <div className="flex flex-col gap-2 min-w-0 justify-center">
             <div className="flex items-end gap-3">
               <div className="flex flex-col items-center">
-                <span className="mono text-5xl font-bold neon-cyan leading-none">{teamAGames}</span>
+                <div className="flex items-center gap-1">
+                  {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamAGames: teamAGames - 1 })}>−</button>}
+                  <span className="mono text-5xl font-bold neon-cyan leading-none">{teamAGames}</span>
+                  {isAdmin && <button className="btn btn-cyan w-5 h-5 text-xs" onClick={() => updateGame({ teamAGames: teamAGames + 1 })}>+</button>}
+                </div>
                 <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
               </div>
               {!hideBallCount && <div className="w-px h-10 self-center" style={{ background: 'var(--border)' }} />}
@@ -237,7 +241,11 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
               </div>}
               {!hideBallCount && <div className="w-px h-10 self-center" style={{ background: 'var(--border)' }} />}
               <div className="flex flex-col items-center">
-                <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)', textShadow: 'none' }}>{teamBGames}</span>
+                <div className="flex items-center gap-1">
+                  {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamBGames: teamBGames - 1 })}>−</button>}
+                  <span className="mono text-5xl font-bold leading-none" style={{ color: 'var(--red)', textShadow: 'none' }}>{teamBGames}</span>
+                  {isAdmin && <button className="btn btn-red w-5 h-5 text-xs" onClick={() => updateGame({ teamBGames: teamBGames + 1 })}>+</button>}
+                </div>
                 <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
               </div>
             </div>
@@ -293,7 +301,11 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
           </div>
           <div className="flex items-center gap-3 w-full justify-center">
             <div className="flex flex-col items-center">
-              <span className="mono text-4xl font-bold neon-cyan leading-none">{teamAGames}</span>
+              <div className="flex items-center gap-1">
+                {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamAGames: teamAGames - 1 })}>−</button>}
+                <span className="mono text-4xl font-bold neon-cyan leading-none">{teamAGames}</span>
+                {isAdmin && <button className="btn btn-cyan w-5 h-5 text-xs" onClick={() => updateGame({ teamAGames: teamAGames + 1 })}>+</button>}
+              </div>
               <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
             </div>
             {!hideBallCount && <div className="w-px h-8" style={{ background: 'var(--border)' }} />}
@@ -346,7 +358,11 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
             </div>}
             {!hideBallCount && <div className="w-px h-8" style={{ background: 'var(--border)' }} />}
             <div className="flex flex-col items-center">
-              <span className="mono text-4xl font-bold leading-none" style={{ color: 'var(--red)' }}>{teamBGames}</span>
+              <div className="flex items-center gap-1">
+                {isAdmin && <button className="btn btn-ghost w-5 h-5 text-xs" onClick={() => updateGame({ teamBGames: teamBGames - 1 })}>−</button>}
+                <span className="mono text-4xl font-bold leading-none" style={{ color: 'var(--red)' }}>{teamBGames}</span>
+                {isAdmin && <button className="btn btn-red w-5 h-5 text-xs" onClick={() => updateGame({ teamBGames: teamBGames + 1 })}>+</button>}
+              </div>
               <span className="text-xs text-[var(--text)] uppercase tracking-wider">games</span>
             </div>
           </div>
