@@ -105,7 +105,16 @@ export default function NineBallArena() {
 
               {/* Games */}
               <div>
-                <div className="text-xs mono tracking-[0.3em] text-[var(--text)] uppercase mb-2">Games</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs mono tracking-[0.3em] text-[var(--text)] uppercase">Games</div>
+                  <button
+                    className="btn btn-ghost px-2 py-0.5 text-xs font-black tracking-widest"
+                    style={{ color: 'var(--text)', borderColor: 'var(--border)' }}
+                    onClick={() => { if (confirm('Reset games won to 0-0?')) updateGame({ teamAGames: 0, teamBGames: 0 }); }}
+                  >
+                    RESET
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 hud-panel px-3 py-2" style={{ background: 'rgba(0,229,255,0.04)' }}>
                     <span className="text-xs mono font-black flex-1" style={{ color: 'var(--cyan)' }}>{game.teamAName}</span>
