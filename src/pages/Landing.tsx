@@ -322,7 +322,7 @@ export default function Landing() {
             <div className="flex items-center justify-between gap-4">
               {/* Team A */}
               <div className="flex flex-col items-center flex-1 gap-2">
-                <div style={{ width: 80, height: 100, overflow: 'hidden', border: '2px solid var(--cyan)', flexShrink: 0 }}>
+                <div style={{ width: 120, height: 150, overflow: 'hidden', border: '2px solid var(--cyan)', flexShrink: 0 }}>
                   <img src="/james.jpeg" alt={game.teamAName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '70% center' }} />
                 </div>
                 <span className="font-black uppercase tracking-widest text-sm" style={{ color: 'var(--cyan)', textShadow: '0 0 10px var(--cyan)' }}>
@@ -336,7 +336,7 @@ export default function Landing() {
               </div>
               {/* Team B */}
               <div className="flex flex-col items-center flex-1 gap-2">
-                <div style={{ width: 80, height: 100, overflow: 'hidden', border: '2px solid var(--red)', flexShrink: 0 }}>
+                <div style={{ width: 120, height: 150, overflow: 'hidden', border: '2px solid var(--red)', flexShrink: 0 }}>
                   <img src="/ross.jpeg" alt={game.teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '0% center' }} />
                 </div>
                 <span className="font-black uppercase tracking-widest text-sm" style={{ color: 'var(--red)', textShadow: '0 0 10px var(--red)' }}>
