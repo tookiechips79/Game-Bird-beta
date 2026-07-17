@@ -8,6 +8,7 @@ interface Props {
   onTeamBWin: () => void;
   avatarASrc?: string;
   avatarBSrc?: string;
+  avatarBPosition?: string;
 }
 
 function TipButton({ playerName, color, align }: { playerName: string; color: string; align: 'left' | 'right' }) {
@@ -125,9 +126,10 @@ function TipButton({ playerName, color, align }: { playerName: string; color: st
   );
 }
 
-export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
+export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc, avatarBPosition }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
   const avatarA = avatarASrc || '/alex.png';
   const avatarB = avatarBSrc || '/tony.jpg';
+  const avatarBPos = avatarBPosition || '70% center';
   const { game, isAdmin: isAdminCtx, updateGame } = useGame();
   const isAdmin = isAdminCtx && !hideAdminControls;
   const { teamAName, teamBName, teamAGames, teamBGames, teamABalls, teamBBalls, teamAHasBreak, currentGameNumber, lastWinner } = game;
@@ -252,7 +254,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
               )}
             </div>
             <div style={{ position: 'relative', width: 112, height: 144, overflow: 'hidden', border: `2px solid ${lastWinner === 'B' ? 'var(--green)' : 'var(--red)'}` }}>
-              <img src={avatarB} alt={teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '70% center', display: 'block' }} />
+              <img src={avatarB} alt={teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: avatarBPos, display: 'block' }} />
               {lastWinner === 'B' && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,255,65,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span className="mono font-black tracking-widest" style={{ fontSize: '0.75rem', color: '#fff', textShadow: '0 1px 3px #000', textAlign: 'center', lineHeight: 1.2 }}>🏆{'\n'}WINNER</span>
@@ -324,7 +326,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
             )}
           </div>
           <div style={{ position: 'relative', width: '100%', maxWidth: 112, aspectRatio: '112/144', overflow: 'hidden', border: `2px solid ${lastWinner === 'B' ? 'var(--green)' : 'var(--red)'}` }}>
-            <img src={avatarB} alt={teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '70% center', display: 'block' }} />
+            <img src={avatarB} alt={teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: avatarBPos, display: 'block' }} />
             {lastWinner === 'B' && (
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,255,65,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span className="mono font-black tracking-widest" style={{ fontSize: '0.75rem', color: '#fff', textShadow: '0 1px 3px #000', textAlign: 'center', lineHeight: 1.2 }}>🏆{'\n'}WINNER</span>
