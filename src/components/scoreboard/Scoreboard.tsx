@@ -13,6 +13,7 @@ interface Props {
   hideBreakIndicator?: boolean;
   hideGameType?: boolean;
   hideGameNumber?: boolean;
+  avatarSize?: number;
 }
 
 function TipButton({ playerName, color, align }: { playerName: string; color: string; align: 'left' | 'right' }) {
@@ -130,10 +131,12 @@ function TipButton({ playerName, color, align }: { playerName: string; color: st
   );
 }
 
-export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc, avatarBPosition, hideBallCount, hideBreakIndicator, hideGameType, hideGameNumber }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
+export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc, avatarBPosition, hideBallCount, hideBreakIndicator, hideGameType, hideGameNumber, avatarSize }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
   const avatarA = avatarASrc || '/alex.png';
   const avatarB = avatarBSrc || '/tony.jpg';
   const avatarBPos = avatarBPosition || '70% center';
+  const avW = avatarSize || 112;
+  const avH = Math.round(avW * (144 / 112));
   const { game, isAdmin: isAdminCtx, updateGame } = useGame();
   const isAdmin = isAdminCtx && !hideAdminControls;
   const { teamAName, teamBName, teamAGames, teamBGames, teamABalls, teamBBalls, teamAHasBreak, currentGameNumber, lastWinner } = game;
@@ -181,7 +184,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
       <div className={`${stackedLayout ? 'hidden' : 'hidden lg:flex'} items-center px-4 py-4 gap-4`}>
 
         {/* TEAM A — avatar left, stats right */}
-        <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: '112px 1fr', minWidth: 0 }}>
+        <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: `${avW}px 1fr`, minWidth: 0 }}>
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {!hideBreakIndicator && teamAHasBreak && (
@@ -193,7 +196,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
                 <div className="text-xs font-black uppercase tracking-widest neon-cyan cursor-pointer text-center leading-tight" onClick={() => isAdmin && setEditingA(true)}>{teamAName}</div>
               )}
             </div>
-            <div style={{ position: 'relative', width: 112, height: 144, overflow: 'hidden', border: `2px solid ${lastWinner === 'A' ? 'var(--green)' : 'var(--cyan)'}` }}>
+            <div style={{ position: 'relative', width: avW, height: avH, overflow: 'hidden', border: `2px solid ${lastWinner === 'A' ? 'var(--green)' : 'var(--cyan)'}` }}>
               <img src={avatarA} alt={teamAName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '70% center', display: 'block' }} />
               {lastWinner === 'A' && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,255,65,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -233,7 +236,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
         </div>
 
         {/* TEAM B — stats left, avatar right */}
-        <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: '1fr 112px', minWidth: 0 }}>
+        <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: `1fr ${avW}px`, minWidth: 0 }}>
           <div className="flex flex-col gap-2 min-w-0 items-end justify-center">
             <div className="flex items-end gap-3">
               {!hideBallCount && <div className="flex flex-col items-center">
@@ -268,7 +271,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
                 <span className="mono font-black text-xs flex items-center justify-center" style={{ width: 18, height: 18, border: '1.5px solid var(--gold)', color: 'var(--gold)', background: 'rgba(255,215,0,0.1)', flexShrink: 0 }}>B</span>
               )}
             </div>
-            <div style={{ position: 'relative', width: 112, height: 144, overflow: 'hidden', border: `2px solid ${lastWinner === 'B' ? 'var(--green)' : 'var(--red)'}` }}>
+            <div style={{ position: 'relative', width: avW, height: avH, overflow: 'hidden', border: `2px solid ${lastWinner === 'B' ? 'var(--green)' : 'var(--red)'}` }}>
               <img src={avatarB} alt={teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: avatarBPos, display: 'block' }} />
               {lastWinner === 'B' && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,255,65,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -296,7 +299,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
               <div className="text-xs font-black uppercase tracking-widest neon-cyan cursor-pointer text-center leading-tight" onClick={() => isAdmin && setEditingA(true)}>{teamAName}</div>
             )}
           </div>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 112, aspectRatio: '112/144', overflow: 'hidden', border: `2px solid ${lastWinner === 'A' ? 'var(--green)' : 'var(--cyan)'}` }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: avW, aspectRatio: `${avW}/${avH}`, overflow: 'hidden', border: `2px solid ${lastWinner === 'A' ? 'var(--green)' : 'var(--cyan)'}` }}>
             <img src={avatarA} alt={teamAName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '70% center', display: 'block' }} />
             {lastWinner === 'A' && (
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,255,65,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -344,7 +347,7 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
               <span className="mono font-black text-xs flex items-center justify-center" style={{ width: 18, height: 18, border: '1.5px solid var(--gold)', color: 'var(--gold)', background: 'rgba(255,215,0,0.1)', flexShrink: 0 }}>B</span>
             )}
           </div>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 112, aspectRatio: '112/144', overflow: 'hidden', border: `2px solid ${lastWinner === 'B' ? 'var(--green)' : 'var(--red)'}` }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: avW, aspectRatio: `${avW}/${avH}`, overflow: 'hidden', border: `2px solid ${lastWinner === 'B' ? 'var(--green)' : 'var(--red)'}` }}>
             <img src={avatarB} alt={teamBName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: avatarBPos, display: 'block' }} />
             {lastWinner === 'B' && (
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,255,65,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
