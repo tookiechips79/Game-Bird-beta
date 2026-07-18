@@ -105,6 +105,12 @@ const faqItems = [
     answer: 'Sweep Coins do not expire — they remain in your account indefinitely until you use them for betting. Your balance persists across gaming sessions, so you can accumulate and use your Sweep Coins whenever you want.',
   },
   {
+    id: 'how-to-cashout',
+    category: 'Account & Credits',
+    question: 'How do I cash out?',
+    answer: 'Go to your Account Settings and select Cashout Funds. Enter the amount you want to cash out and submit the request. Once processed, an admin will send your payout directly via Zelle, Cash App, Apple Pay, or Venmo.',
+  },
+  {
     id: 'scoreboard',
     category: 'Game Features',
     question: 'What information does the Scoreboard show?',
