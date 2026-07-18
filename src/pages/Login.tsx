@@ -155,7 +155,7 @@ export default function Login() {
           <div className="font-black uppercase tracking-widest whitespace-nowrap" style={{ fontSize: 'clamp(2.5rem,9vw,3.5rem)', color: '#000', textShadow: 'none' }}>
             Game Bird
           </div>
-          <div className="mono text-xs tracking-[0.3em] mt-1" style={{ color: '#fff' }}>PRIVATE BETTING PLATFORM</div>
+          <div className="mono text-xs tracking-[0.3em] mt-1" style={{ color: '#fff' }}>PRIVATE BILLIARDS PLATFORM</div>
         </div>
 
         {/* Card */}
