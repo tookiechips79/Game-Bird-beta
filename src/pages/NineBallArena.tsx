@@ -274,17 +274,29 @@ export default function NineBallArena() {
         </button>
         <PlayerBank />
         {game.streamVideoId && (
-          <div className="hud-panel bracket w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
-            <iframe
-              width="100%"
-              height="100%"
-              src={`https://www.youtube.com/embed/${game.streamVideoId}?autoplay=1&mute=1`}
-              title="Live Stream"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+          <>
+            <div className="hud-panel bracket w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${game.streamVideoId}?autoplay=1&mute=1`}
+                title="Live Stream"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <button
+              onClick={() => {
+                const url = `https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}`;
+                window.open(url, 'ytchat', 'width=420,height=650');
+              }}
+              className="w-full py-2 text-xs mono font-black tracking-widest"
+              style={{ background: 'none', border: '1px solid rgba(255,0,0,0.3)', color: 'var(--red)', cursor: 'pointer', borderRadius: 4 }}
+            >
+              💬 OPEN LIVE CHAT
+            </button>
+          </>
         )}
         <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} hideAdminControls avatarASrc="/avatar-silhouette.svg" avatarBSrc="/avatar-silhouette.svg" avatarBPosition="center" hideBreakIndicator hideGameType avatarSize={224} />
         <BettingQueue />
