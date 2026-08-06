@@ -34,6 +34,7 @@ export default function NineBallArena() {
   const { game, declareWinner, endMatch, isAdmin, setIsAdmin, resetQueues, updateGame } = useGame();
   const { users, currentUser, currentUserId, coinAuditLog, mergeServerUsers, requestAllUsers } = useUser();
   const [fetchingData, setFetchingData] = useState(false);
+  const [showChat, setShowChat] = useState(true);
 
   const fetchDataFromDb = () => {
     const serverUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://gamebird-app-production.up.railway.app';
@@ -286,15 +287,24 @@ export default function NineBallArena() {
                 allowFullScreen
               />
             </div>
-            <div className="hud-panel bracket w-full overflow-hidden" style={{ height: 420 }}>
-              <iframe
-                width="100%"
-                height="100%"
-                src={`https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}&dark_theme=1`}
-                title="Live Chat"
-                frameBorder="0"
-              />
-            </div>
+            <button
+              onClick={() => setShowChat(v => !v)}
+              className="w-full py-2 text-xs mono font-black tracking-widest"
+              style={{ background: 'none', border: '1px solid rgba(255,0,0,0.3)', color: 'var(--red)', cursor: 'pointer', borderRadius: 4 }}
+            >
+              💬 {showChat ? 'HIDE CHAT' : 'SHOW CHAT'}
+            </button>
+            {showChat && (
+              <div className="hud-panel bracket w-full overflow-hidden" style={{ height: 420 }}>
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}&dark_theme=1`}
+                  title="Live Chat"
+                  frameBorder="0"
+                />
+              </div>
+            )}
           </>
         )}
         <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} hideAdminControls avatarASrc="/avatar-silhouette.svg" avatarBSrc="/avatar-silhouette.svg" avatarBPosition="center" hideBreakIndicator hideGameType avatarSize={224} />
