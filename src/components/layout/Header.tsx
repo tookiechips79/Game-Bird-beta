@@ -6,7 +6,7 @@ import UserBar from './UserBar';
 
 const NAV_LINKS = [
   // { to: '/arena', label: 'ARENA' }, // hidden for now — route still works if linked directly
-  { to: '/9ball-arena', label: '9 BALL ARENA' },
+  { to: '/9ball-arena', label: 'ARENA' },
   { to: '/postbox', label: 'POSTBOX' },
   { to: '/features', label: 'FEATURES' },
   { to: '/about', label: 'ABOUT' },
