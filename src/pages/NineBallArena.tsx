@@ -286,16 +286,15 @@ export default function NineBallArena() {
                 allowFullScreen
               />
             </div>
-            <button
-              onClick={() => {
-                const url = `https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}`;
-                window.open(url, 'ytchat', 'width=420,height=650');
-              }}
-              className="w-full py-2 text-xs mono font-black tracking-widest"
-              style={{ background: 'none', border: '1px solid rgba(255,0,0,0.3)', color: 'var(--red)', cursor: 'pointer', borderRadius: 4 }}
-            >
-              💬 OPEN LIVE CHAT
-            </button>
+            <div className="hud-panel bracket w-full overflow-hidden" style={{ height: 420 }}>
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}`}
+                title="Live Chat"
+                frameBorder="0"
+              />
+            </div>
           </>
         )}
         <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} hideAdminControls avatarASrc="/avatar-silhouette.svg" avatarBSrc="/avatar-silhouette.svg" avatarBPosition="center" hideBreakIndicator hideGameType avatarSize={224} />
