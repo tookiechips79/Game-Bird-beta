@@ -290,7 +290,7 @@ export default function NineBallArena() {
               <iframe
                 width="100%"
                 height="100%"
-                src={`https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}`}
+                src={`https://www.youtube.com/live_chat?v=${game.streamVideoId}&embed_domain=${window.location.hostname}&dark_theme=1`}
                 title="Live Chat"
                 frameBorder="0"
               />
