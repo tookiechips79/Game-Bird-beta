@@ -132,8 +132,8 @@ function TipButton({ playerName, color, align }: { playerName: string; color: st
 }
 
 export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc, avatarBPosition, hideBallCount, hideBreakIndicator, hideGameType, hideGameNumber, avatarSize }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
-  const avatarA = avatarASrc || '/alex.png';
-  const avatarB = avatarBSrc || '/tony.jpg';
+  const avatarA = avatarASrc || '/avatar-silhouette.svg';
+  const avatarB = avatarBSrc || '/avatar-silhouette.svg';
   const avatarBPos = avatarBPosition || '70% center';
   const avW = avatarSize || 112;
   const avH = Math.round(avW * (144 / 112));
