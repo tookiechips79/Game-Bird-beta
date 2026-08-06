@@ -14,7 +14,6 @@ interface Props {
   hideGameType?: boolean;
   hideGameNumber?: boolean;
   avatarSize?: number;
-  streamUrl?: string;
 }
 
 function TipButton({ playerName, color, align }: { playerName: string; color: string; align: 'left' | 'right' }) {
@@ -132,7 +131,7 @@ function TipButton({ playerName, color, align }: { playerName: string; color: st
   );
 }
 
-export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc, avatarBPosition, hideBallCount, hideBreakIndicator, hideGameType, hideGameNumber, avatarSize, streamUrl }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
+export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, stackedLayout, avatarASrc, avatarBSrc, avatarBPosition, hideBallCount, hideBreakIndicator, hideGameType, hideGameNumber, avatarSize }: Props & { hideAdminControls?: boolean; stackedLayout?: boolean }) {
   const avatarA = avatarASrc || '/alex.png';
   const avatarB = avatarBSrc || '/tony.jpg';
   const avatarBPos = avatarBPosition || '70% center';
@@ -180,20 +179,6 @@ export default function Scoreboard({ onTeamAWin, onTeamBWin, hideAdminControls, 
         <TimerDisplay hideGameType={hideGameType} />
         <div />
       </div>
-
-      {streamUrl && (
-        <div className="flex justify-center px-4 py-2 border-b border-[var(--border)]">
-          <a
-            href={streamUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mono text-xs font-black tracking-widest uppercase flex items-center gap-1"
-            style={{ color: 'var(--red)', border: '1px solid var(--red)', padding: '3px 10px', textDecoration: 'none' }}
-          >
-            📺 WATCH LIVE
-          </a>
-        </div>
-      )}
 
       {/* ── DESKTOP layout (original, untouched) ── */}
       <div className={`${stackedLayout ? 'hidden' : 'hidden lg:flex'} items-center px-4 py-4 gap-4`}>

@@ -13,23 +13,6 @@ import BetLedger from '@/components/history/BetLedger';
 import UserManager from '@/components/admin/UserManager';
 import CoinAuditLog from '@/components/admin/CoinAuditLog';
 
-function parseYouTubeId(input: string): string {
-  const trimmed = input.trim();
-  if (!trimmed) return '';
-  // Already a bare video ID
-  if (/^[\w-]{11}$/.test(trimmed)) return trimmed;
-  try {
-    const url = new URL(trimmed);
-    if (url.hostname.includes('youtu.be')) return url.pathname.slice(1);
-    if (url.pathname.startsWith('/live/') || url.pathname.startsWith('/embed/') || url.pathname.startsWith('/shorts/')) {
-      return url.pathname.split('/')[2] || '';
-    }
-    return url.searchParams.get('v') || '';
-  } catch {
-    return '';
-  }
-}
-
 export default function NineBallArena() {
   const { game, declareWinner, endMatch, isAdmin, setIsAdmin, resetQueues, updateGame } = useGame();
   const { users, currentUser, currentUserId, coinAuditLog, mergeServerUsers, requestAllUsers } = useUser();
@@ -55,7 +38,6 @@ export default function NineBallArena() {
   const [showUserManager, setShowUserManager] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [videoInput, setVideoInput] = useState('');
   const unackedAlerts = coinAuditLog.filter(e => !e.acknowledged).length;
   const [headerH, setHeaderH] = useState(53);
   useEffect(() => {
@@ -221,35 +203,6 @@ export default function NineBallArena() {
                   >
                     RESET SCORES
                   </button>
-                  <div className="flex items-center gap-2 w-full">
-                    <input
-                      type="text"
-                      placeholder="YouTube video/live URL or ID"
-                      value={videoInput}
-                      onChange={e => setVideoInput(e.target.value)}
-                      className="flex-1 px-2 py-2 text-xs mono"
-                      style={{ background: '#111', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none', borderRadius: 4 }}
-                    />
-                    <button
-                      className="btn btn-cyan px-3 py-2 text-xs font-black tracking-widest"
-                      onClick={() => {
-                        const id = parseYouTubeId(videoInput);
-                        if (!id) { alert('Could not find a video ID in that link.'); return; }
-                        updateGame({ streamVideoId: id });
-                        setVideoInput('');
-                      }}
-                    >
-                      SET STREAM
-                    </button>
-                    {game.streamVideoId && (
-                      <button
-                        className="btn btn-ghost px-3 py-2 text-xs font-black tracking-widest"
-                        onClick={() => updateGame({ streamVideoId: '' })}
-                      >
-                        CLEAR
-                      </button>
-                    )}
-                  </div>
                   <button
                     className="btn btn-ghost px-4 py-2 text-xs font-black tracking-widest"
                     style={{ color: 'var(--text)', borderColor: 'var(--border)' }}
@@ -273,20 +226,7 @@ export default function NineBallArena() {
           {fetchingData ? '⟳ FETCHING...' : '⟳ FETCH DATA'}
         </button>
         <PlayerBank />
-        {game.streamVideoId && (
-          <div className="hud-panel bracket w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
-            <iframe
-              width="100%"
-              height="100%"
-              src={`https://www.youtube.com/embed/${game.streamVideoId}?autoplay=1&mute=1`}
-              title="Live Stream"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        )}
-        <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} hideAdminControls avatarASrc="/james.jpeg" avatarBSrc="/ross.jpeg" avatarBPosition="0% center" hideBallCount hideBreakIndicator hideGameType avatarSize={224} streamUrl="https://youtube.com/@thebiscuitshow6583?si=3t4_Lk_HowJLlLye" />
+        <Scoreboard onTeamAWin={() => handleWin('A')} onTeamBWin={() => handleWin('B')} hideAdminControls avatarASrc="/james.jpeg" avatarBSrc="/ross.jpeg" avatarBPosition="0% center" hideBallCount hideBreakIndicator hideGameType avatarSize={224} />
         <BettingQueue />
         <GameHistory hideBallCount />
         <BetLedger />

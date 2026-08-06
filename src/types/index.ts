@@ -141,7 +141,6 @@ export interface GameState {
   isTimerRunning: boolean;
   timerVersion?: number;
   lastWinner: 'A' | 'B' | null;
-  streamVideoId: string;
 }
 
 export interface SnapshotBet {

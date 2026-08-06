@@ -67,7 +67,6 @@ const defaultGame: GameState = {
   timerElapsedMs: 0,
   isTimerRunning: false,
   lastWinner: null,
-  streamVideoId: '',
 };
 
 function loadGame(): GameState {
